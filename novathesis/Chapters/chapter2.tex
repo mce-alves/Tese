@@ -28,7 +28,8 @@ It is expected that a consensus protocol ensures the following properties \cite{
 \begin{enumerate}
   \item Termination - eventually, every correct process accepts a value.
   \item Agreement - all correct processes accept the same value.
-  \item Integrity - if all correct processes proposed the same value, then all correct processes accept that same value. A stronger integrity constraint for Byzantine fault-tolerant consensus is: if a correct process accepts a value v, then v must have been previously proposed by some correct process.
+  \item Validity - if all correct processes proposed the same value, then all correct processes accept that same value. A stronger integrity constraint for Byzantine fault-tolerant consensus is: if a correct process accepts a value v, then v must have been previously proposed by some correct process.
+  \item Integrity - no process accepts more than one value.
 \end{enumerate}
 
 We will now present Single-Decree Paxos \cite{paxos_made_simple}, which allows different machines to agree on a single value out of several proposed values. Then we will present  Raft \cite{paxos_vs_raft}\cite{raft} and Multi-Decree Paxos \cite{paxos_vs_raft}\cite{paxos_complex}\cite{paxos_live}, which introduce the concept of a replicated log of operations and ensure that all correct processes will execute these operations in the same order on the same state.
@@ -43,7 +44,7 @@ The Single-Decree Paxos protocol \cite{paxos_made_simple} is used to achieve con
 When a peer receives a value from a client, it begins behaving like a Proposer. A Proposer executes the following steps \cite{paxos_made_simple}:
 
 \begin{enumerate}
-  \item Sends a \texttt{PREPARE} message to all the other peers, which contains the proposal number that it intends to use in a future proposal.
+  \item Sends a \texttt{PREPARE} message to all the other peers, which contains the sequence number that it intends to use in a future proposal.
   \item Waits for the responses to its \texttt{PREPARE} message, which are called \texttt{PROMISES}. Upon receiving a \texttt{PROMISE} from a majority of peers, the Proposer proceeds to send a \texttt{PROPOSE} message to all the peers - note that if any of the received \texttt{PROMISES} contained the information of an already accepted value, this Proposer will have to propose that same accepted value.
   \item Finally, if the Proposer receives an \texttt{ACCEPT} response from a majority of peers, then it has achieved consensus on its proposal and can inform the Learners (implementation dependent) and the client.
 \end{enumerate}
@@ -53,22 +54,47 @@ An Acceptor keeps a record of the received \texttt{PREPARE} and \texttt{PROPOSE}
 Upon receiving a \texttt{PREPARE} message, an Acceptor will respond in one of three ways \cite{paxos_made_simple}:
 
 \begin{enumerate}
-  \item If the proposal number in the \texttt{PREPARE} message is the largest the Acceptor has seen so far and it hasn’t accepted values yet, the Acceptor will respond with a \texttt{PROMISE} message containing the received proposal number, and from that moment forward the Acceptor will ignore any messages that contain a smaller proposal number.
-  \item If the proposal number is not the largest the Acceptor has seen so far and it hasn’t accepted any values yet, it will simply ignore the \texttt{PREPARE} message.
-  \item If the Acceptor has already accepted a value, it will respond with a \texttt{PROMISE} message containing the highest proposal number it has seen so far, and the value that it has accepted.
+  \item If the sequence number in the \texttt{PREPARE} message is the largest the Acceptor has seen so far and it hasn’t accepted values yet, the Acceptor will respond with a \texttt{PROMISE} message containing the received sequence number, and from that moment forward the Acceptor will ignore any messages that contain a smaller sequence number.
+  \item If the sequence number is not the largest the Acceptor has seen so far and it hasn’t accepted any values yet, it will simply ignore the \texttt{PREPARE} message.
+  \item If the Acceptor has already accepted a value, it will respond with a \texttt{PROMISE} message containing the highest sequence number it has seen so far, and the value that it has accepted.
 \end{enumerate}
 
 Upon receiving a \texttt{PROPOSE} message, an Acceptor will respond in one of two ways \cite{paxos_made_simple}:
 
 \begin{enumerate}
-  \item If it hasn’t accepted any proposals yet, and the proposal number is larger than or equal to the largest proposal number it has seen so far, the Acceptor will accept the value and will respond with an \texttt{ACCEPT} message.
-  \item If it has already accepted a value, or it has seen a larger proposal number, the Acceptor will respond with a \texttt{REJECT} message or simply ignore the proposal - depending on the implementation.
+  \item If it hasn’t accepted any proposals yet, and the sequence number is larger than or equal to the largest sequence number it has seen so far, the Acceptor will accept the value and will respond with an \texttt{ACCEPT} message.
+  \item If it has already accepted a value, or it has seen a larger sequence number, the Acceptor will respond with a \texttt{REJECT} message or simply ignore the proposal - depending on the implementation.
 \end{enumerate}
 
 Finally, the Learner role represents the entity that will “learn” the value for which consensus was reached. In real systems, the Learners are, for example, databases. Therefore, in the articles that describe the protocol, there is very little information about the Learner’s behavior.
 
 
-It is important to note that, in the presence of concurrent proposals, the Single-Decree Paxos protocol may not terminate as different proposers might send consecutive \texttt{PREPARE} messages with higher proposal numbers for an indefinite amount of time. However, it does guarantee that if consensus is reached, all Learners will “learn” that same agreed-upon value.
+It is important to note that, in the presence of concurrent proposals, the Single-Decree Paxos protocol may not terminate as different proposers might send consecutive \texttt{PREPARE} messages with higher sequence numbers for an indefinite amount of time. However, it does guarantee that if consensus is reached, all Learners will “learn” that same agreed-upon value.
+
+
+
+
+\subsection{Multi-Decree Paxos}
+
+The Single-Decree Paxos protocol describes how to reach a consensus on a single value however, in a majority of scenarios, this is not enough to maintain a proper state of a system. Multi-Decree Paxos is essentially a sequential execution of multiple Single-Decree Paxos rounds, to achieve log replication. 
+
+There are several papers that present somewhat different descriptions of Multi-Decree Paxos, such as \cite{paxos_complex}, \cite{paxos_live} and \cite{paxos_vs_raft}. For now, we will present the protocol as described in “Paxos Made Live - An Engineering Perspective” \cite{paxos_live}.
+
+The state kept by each peer is very similar to the state kept in Single-Decree Paxos, with the addition of the log entries and the identity of the last known leader.
+
+At the start of the protocol, one peer is elected to act as the \textit{coordinator} (also known as \textit{leader} or \textit{distinguished proposer}). This election can be done through one round of Single-Decree Paxos, where a peer generates a new sequence number and sends a \texttt{PREPARE} message to the remaining peers. If he receives a majority of valid \texttt{PROMISES} then he can start acting as the coordinator. Note that to ensure no out-of-date peers, the \texttt{PREPARE} message must include the peer’s log, which the leader then merges with its own log.
+
+The coordinator can then receive requests from clients or from other peers, selecting one of those entries to be broadcasted. This is the \texttt{PROPOSE} message sent in Single-Decree Paxos. This message will now also include the coordinator’s log, so that peers that failed in a previous iteration of the protocol may catch up to the current state of the system.
+
+Once a majority of replicas acknowledge the coordinator - \texttt{ACCEPT} his proposal - consensus is reached, and the coordinator proceeds to send a \texttt{COMMIT} message to notify the replicas.
+
+\vspace{0.5cm}
+
+The previously mentioned steps are then repeated. In practice, the election step only needs to happen again if the current coordinator fails. This failure detection can be achieved by leveraging timeouts and heartbeats.
+
+\vspace{0.5cm}
+
+Multi-Decree Paxos guarantees that peers will reach a consensus on the order of the entries in the log, but in the occasion of a coordinator failure, some client requests may not be added to the log.
 
 
 
@@ -116,31 +142,11 @@ Upon receiving any message that contains a term larger than its own, the Leader 
 
 \vspace{0.5cm}
 
-The Raft protocol guarantees that peers will reach a consensus on the order of the entries in the log and execute those operations in the same order, however, it does not guarantee that all entries will be added to the log, as some might get lost during leader failures.
+As in the Multi-Decree Paxos protocol, the Raft protocol guarantees that peers will reach a consensus on the order of the entries in the log and execute those operations in the same order, however, it does not guarantee that all entries will be added to the log, as some might get lost during leader failures.
 
 
 
-\subsection{Multi-Decree Paxos}
 
-The Single-Decree Paxos protocol describes how to reach a consensus on a single value however, in a majority of scenarios, this is not enough to maintain a proper state of a system. Multi-Decree Paxos is essentially a sequential execution of multiple Single-Decree Paxos rounds, to achieve log replication. 
-
-There are several papers that present somewhat different descriptions of Multi-Decree Paxos, such as \cite{paxos_complex}, \cite{paxos_live} and \cite{paxos_vs_raft}. For now, we will present the protocol as described in “Paxos Made Live - An Engineering Perspective” \cite{paxos_live}.
-
-The state kept by each peer is very similar to the state kept in Single-Decree Paxos, with the addition of the log entries and the identity of the last known leader.
-
-At the start of the protocol, one peer is elected to act as the \textit{coordinator} (also known as \textit{leader} or \textit{distinguished proposer}). This election can be done through one round of Single-Decree Paxos, where a peer generates a new sequence number and sends a \texttt{PREPARE} message to the remaining peers. If he receives a majority of valid \texttt{PROMISES} then he can start acting as the coordinator. Note that to ensure no out-of-date peers, the \texttt{PREPARE} message must include the peer’s log, which the leader then merges with its own log.
-
-The coordinator can then receive requests from clients or from other peers, selecting one of those entries to be broadcasted. This is the \texttt{PROPOSE} message sent in Single-Decree Paxos. This message will now also include the coordinator’s log, so that peers that failed in a previous iteration of the protocol may catch up to the current state of the system.
-
-Once a majority of replicas acknowledge the coordinator - \texttt{ACCEPT} his proposal - consensus is reached, and the coordinator proceeds to send a \texttt{COMMIT} message to notify the replicas.
-
-\vspace{0.5cm}
-
-The previously mentioned steps are then repeated. In practice, the election step only needs to happen again if the current coordinator fails. This failure detection can be achieved in a similar way as in Raft, by leveraging timeouts and heartbeats.
-
-\vspace{0.5cm}
-
-Like Raft, Multi-Decree Paxos guarantees that peers will reach a consensus on the order of the entries in the log, but in the occasion of a coordinator failure, some client requests may not be added to the log.
 
 
 
