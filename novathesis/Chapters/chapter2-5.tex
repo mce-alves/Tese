@@ -1,0 +1,105 @@
+%!TEX root = ../template.tex
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% chapter2.tex
+%% NOVA thesis document file
+%%
+%% Chapter with the template manual
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\typeout{NT LOADING FILE chapter2-5.tex}
+
+\chapter{Simulation}
+\label{cha:simulation}
+
+\glsresetall
+
+
+\textit{"Simulation is the imitation of the operations of a real-world process or system over time"} \cite{intro_simulation}. It is a crucial tool for solving problems and studying the behavior of real systems. Simulation offers several benefits \cite{intro_simulation} such as providing a controlled environment to test specific scenarios, without the influence of external factors. It also provides users the ability to test the effects of system changes, before deploying those changes to production where any mistakes can have severe impacts, which is of utmost importance in blockchain systems since they often control financial transactions.
+
+The following sections will present the fundamental simulation concepts, and present discrete-event simulation, as it is the most appropriate simulation model for this project. Unless explicitly mentioned, the presented information is based on \textit{Simulation Modeling and Analysis} \cite{sim_law} by \textit{Averill Law}.
+
+\section{Concepts}
+
+In simulation, a \textit{system} is a collection of \textit{entities} that interact with each other and with the environment towards achieving a goal. A simulation may include all, or a portion of, the entities that exist in the real system.
+
+The \textit{state} of a system is a collection of variables that are needed to describe the system at a particular point in time, and are directly related to the results that the simulation should produce.
+
+A system is often simulated through a \textit{model}. A model is a representation of the real system and is often a simplified version of it, however, it must be detailed enough to allow for \textit{valid} conclusions to be drawn about the real system.
+
+A simulation model can be classified along three different axis:
+
+\begin{enumerate}
+	\item \textbf{Static or Dynamic}
+		\begin{itemize}
+			\item A model is classified as \textit{static} if it represents a system at a specific point in time.
+			\item A \textit{dynamic} model represents the system as it evolves over time.
+		\end{itemize}
+	\item \textbf{Deterministic or Stochastic}
+		\begin{itemize}
+			\item A model is \textit{deterministic} if the behavior of its entities does not rely on probabilistic components, such as randomization.
+			\item In a \textit{stochastic} model, the simulation relies on random inputs.
+		\end{itemize}
+	\item \textbf{Continuous or Discrete}
+		\begin{itemize}
+			\item In a \textit{continuous} model, the state of the simulation varies continuously over time.
+			\item In a \textit{discrete} model, the state only changes at discrete points in time.
+		\end{itemize}
+\end{enumerate}
+
+A model that is \textit{discrete}, \textit{dynamic} and \textit{stochastic} is referred to as a \textit{discrete-event simulation model}.
+
+\section{Discrete-Event Simulation}
+
+\textit{Discrete-Event Simulation} is used to model systems that evolve over time, using a set of state variables that change at discrete points in time - points where events occur. An \textit{event} is seen as an instantaneous occurrence that can change the state of the system.
+
+In discrete-event simulation, there is a distinction between \textit{real time} and the \textit{simulation time}. Real time is the amount of time a simulation takes to execute. The simulation time is the view of time inside the simulation. This distinction is important because it enables the contraction or dilation of time, allowing users to study the long-term behavior of the system in a shorter amount of time, for example.
+
+The existence of \textit{simulation time} requires a mechanism for managing this clock. The most commonly used is the \textit{next-event time advance mechanism}, which consists of computing the times when future events will occurand advancing the simulation clock to match the time of occurrence of the first of those events. An advantage of this mechanism is that it ignores periods of inactivity (where no events occur) by jumping the clock from event to event.
+
+\subsection{Core Components of a Discrete-Event Simulation Model}
+
+Although simulation can be used in a large variety of areas, there are some core components that are present in most discrete-event simulation models \cite{sim_law}:
+
+\begin{enumerate}
+	\item \textbf{System state} - the collection of all state variables that are necessary to represent the system at a specific point in time
+	\item \textbf{Simulation clock} - a variable representing the current value of the simulation time, as well as the mechanism for advancing the clock
+	\item \textbf{Event list} - a list containing the next time when each event will occur
+	\item \textbf{Statistical counters} - set of variables used to track statistical information required for calculating performance metrics
+	\item \textbf{Initialization routine} - responsible for initializing every component of the simulator at time 0
+	\item \textbf{Event routine} - responsible for updating the state of the system when an event occurs
+	\item \textbf{Library routines} - responsible for generating random observations from probability distributions, to abstract the execution of certain tasks in the system
+	\item \textbf{Report generator} - produces a report with the results of the simulation
+	\item \textbf{Main program} - the top-level simulation loop
+\end{enumerate}
+
+Furthermore, from a user's point-of-view, modelling discrete-event simulations can be done via two different approaches: \textit{event-scheduling} or \textit{process}. The \textit{event-scheduling approach} consists of modeling a system by defining its key events and the corresponding event-handler routines, that give a detailed description of the state changes that take place when each event occurs. On the other hand, the \textit{process approach} consists of defining a single routine for an entity, that describes its behavior as it progresses in the system.
+
+It is worth highlighting that internally these two approaches are very similar, as they both require the components described above. However, from a user's perspective, the \textit{process approach} usually feels more natural, as the code produced to implement the entity's routine is similar to the code produced for the real system.
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
