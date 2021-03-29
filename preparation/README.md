@@ -1,0 +1,43 @@
+## Simulation Bibliography
+
+- Books:
+	- **Simulation Modeling and Analysis**, 5th Edition, 2014, *Averill Law*.
+		- *Book citations*: ~21k.
+		- *Author citations*: ~27k.
+		- Seems to be widely considered as a solid foundation for learning simulation. Presents the base concepts about simulation, and then dives deeper into discrete-event simulation. Places a heavy focus on modeling techniques, and on which probabilistic distributions are better suited for modeling (abstracting) different operations.
+	- **Discrete-Event System Simulation**, 5th Edition, *Jerry Banks*.
+		- *Citations*: ?
+		- Referenced in the previously mentioned book "Simulation Modeling and Analysis".
+		- Overall very similar content as the previously mentioned book. 
+	- **Distributed Computing Fundamentals, Simulations and Advanced Topics**, 2nd Edition, *Hagit Attiya* and *Jennifer Welch*.
+		- *Book citations*: ~1800.
+		- *Author citations*: ~9k and ~7k.
+		- The simulation chapters present a more formal model for simulations in the context of distributed systems. Presents specifications for simulating communication protocols (i.e: broadcast) using a layer-based approach to compose different protocols. 
+	- **Modeling and Tools for Network Simulation**, *Klaus Wehrle, Mesut Gunes and James Gross*.
+		- *Book Citations*: ~300.
+		- *Editor Citations*: ~9000, ~3200 and ~3500
+		- *Author citations*: each chapter is written by different authors.
+		- In the introductory chapters, when presenting the base discrete-event simulation concepts the authors reference the first two books ("Simulation Modeling and Analysis" and "Discrete Event System Simulation").
+		- Provides an overview of different network simulators, such as **ns3** and **OMNeT++**, which are useful for knowing what existing simulators offer to help an user model a simulation.
+		- Provides an in-depth chapter detailing how to accurately model internet delay in peer-to-peer simulations, as well as how to model user behavior in those systems. Even though examples are directed towards modeling applications such as Bittorrent, some of the concepts can be applied to other applications.
+- Papers:
+	- **A Generalized Agent Based Framework for Modeling a Blockchain System**, *Chaitanya Kaligotla* and *Charles Macal*.
+		- *Paper Citations*: <10.
+		- *Author Citations*: ~30 and ~11k.
+		- *Published in*: Winter Simulation Conference (*Conference Rank B*)
+		- Overall both the model and the simulation steps described in this paper seem very simplified, possibly loosing fidelity in the simulation results. Besides, the simulation steps presented appear to provide less flexibility than using a "standard" discrete-event simulation approach.
+	- **SimBlock: A Blockchain Network Simulator**, *Ryohei Banno* et al.
+		- *Paper Citations*: ~50.
+		- *Author Citations*: ~300.
+		- *Source Code*: https://github.com/dsg-titech/simblock
+		- A simulator implemented in Java. The users can change network and node properties to study their impact in the behavior of the blockchain.
+		- The main limitation seems to be the lack of an abstraction mechanism to facilitate the implementation and reasoning of different protocols.
+	- **Shadow-Bitcoin: Scalable Simulation via Direct Execution of Multi-threaded Applications**, *Andrew Miller* and *Rob Jansen*
+		- *Paper Citations*: ~45
+		- *Author Citations*: ~10k and ~1500.
+		- ******************TODO********************
+- Thesis:
+	- Blocksim
+	- Corten (not this name)
+	- VIBES
+	- eVIBES
