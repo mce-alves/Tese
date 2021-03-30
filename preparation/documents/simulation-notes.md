@@ -230,22 +230,29 @@ Altough their goal was **not** blockchain fidelity nor a way to study blockchain
 
 Components:
 
-- Simulation World: manages the inputs of the simulator, such as configuration (message size, block size, possible node locations), delays (time taken to validate transactions, blocks, time between blocks), latency (latency between possible node locations) and throughput (received and sent throughput of possible node locations)
-- Discrete Event Simulation Engine: scheduling of events, queuing and processing of events, communication between other components, management of simulation clock.
-- Node Factory: creation and initialization of nodes, in user specified locations, etc.
-- Transaction Factory: creates batches of random transactions that are then broadcasted by a random (or chosen) node.
-- Reports: writing logs and metrics to files.
-- Monitor: captures metrics such as number of blocks created per node, transactions broadcast per node, propagation time of transactions, etc.
+- **Simulation World**: manages the inputs of the simulator, such as configuration (message size, block size, possible node locations), delays (time taken to validate transactions, blocks, time between blocks), latency (latency between possible node locations) and throughput (received and sent throughput of possible node locations)
+- **Discrete Event Simulation Engine**: scheduling of events, queuing and processing of events, communication between other components, management of simulation clock.
+- **Node Factory**: creation and initialization of nodes, in user specified locations, etc.
+- **Transaction Factory**: creates batches of random transactions that are then broadcasted by a random (or chosen) node.
+- **Reports**: writing logs and metrics to files.
+- **Monitor**: captures metrics such as number of blocks created per node, transactions broadcast per node, propagation time of transactions, etc.
 
 ## VIBES
 
 Components:
-- Node: each node is an Actor, and follows a very simple protocol that replicates the behavior in a blockchain network.
-- Coordinator: essentially the same as the discrete event simulation engine in **BlockSim**.
-- Reducer: takes the network's state as input, and returns an output in a convenient format to be processed by the client (visual interface).
+- **Node**: each node is an Actor, and follows a very simple protocol that replicates the behavior in a blockchain network (using some abstractions, for example using "best guesses" to replace the mining process in Bitcoin's PoW).
+- **Coordinator**: essentially the same as the discrete event simulation engine in **BlockSim**.
+- **Reducer**: takes the network's state as input, and returns an output in a convenient format to be processed by the client (visual interface).
 
+## Corten
 
-
+Components:
+- **Application**: contains the application specific user-defined code.
+- **Process**: bridge between the application and the remaining components (provides an interface to communicate with the different components).
+- **Network**: model of latency, jitter and packet loss.
+- **Asynchony**: model of process asynchrony.
+- **Configuration**: a YAML configuration file, used to specify some simulation parameters (for example, number of processes, RNG seed, etc.).
+- **Simulation Kernel**: responsible for executing the simulation, ordering and handling events and passing control to the corresponding application.
 
 
 
