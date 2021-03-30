@@ -35,9 +35,10 @@
 	- **Shadow-Bitcoin: Scalable Simulation via Direct Execution of Multi-threaded Applications**, *Andrew Miller* and *Rob Jansen*
 		- *Paper Citations*: ~45
 		- *Author Citations*: ~10k and ~1500.
-		- ******************TODO********************
+		- Shadow (https://shadow.github.io/) is a discrete-event network simulation/emulation framework (allows the execution of real software - emulation - over a simulated network - simulation). It monitors the call of some system functions (ex: for sending messages over the network) and intercepts them, redirecting them through Shadow thus allowing for code to be executed seamlessly.
+		- This framework is extended through plugins, and in this paper the authors develop a plugin that allows the execution of multi-threaded applications inside of Shadow with the use case of executing the Bitcoin client.
 - Thesis:
-	- Blocksim
-	- Corten (not this name)
-	- VIBES
-	- eVIBES
+	- **BlockSim: Blockchain Simulator**:
+	- **Large Scale Distributed Algorithms Simulator**: Proposes *Corten* (https://github.com/miguelammatos/corten), a distributed systems simulator written in Rust, design with the goal of overcoming shortcomings of other simulators such as poor scalability and modelling asynchrony between processes. As an example the author presents results of simulating *Chord* (a distributed hash table). In future work, the author pretends to provide an high-level language so that users don't need to write Rust code directly.
+	- **VIBES: Fast Blockchain Simulations for Large-scale Peer-to-Peer Networks**:
+	- **Design and Implementation of an Ethereum-like Blockchain Simulation Framework**: 
