@@ -1,0 +1,91 @@
+-------------------------------------------------------------------------
+
+Overview of the different classes, and behavior they contain:
+
+simblock.block
+-> simblock.block.Block
+   -> A Block in the blockchain. Also contains operations to access the parents in the chain, and verifying if two blocks are on the same chain.
+   -> Blocks do not contain transactions. These are not modeled in the simulator.
+-> simblock.block.ProofOfWorkBlock
+   -> Extends the Block for PoW, adding difficulty information and calculation
+-> simblock.block.SamplePoSBlock
+   -> Extends the Block for PoS, adding information about Coinages
+-> simblock.block.Coinage
+   -> Representation of the Coins a node possesses and their age
+
+simblock.node.routing
+-> BitcoinCoreTable (extends AbstractRoutingTable)
+   -> used to create the routing tables for the nodes in the network
+   -> consists of a set of inbound and outbound connections/links
+   -> the links are generated at random
+
+simblock.node.consensus
+-> simblock.node.consensus.AbstractConsensusAlgo
+   -> The template for a consensus algorithm, containing 3 main operations:
+      -> a method that creates a minting task (event for the creation of a new block)
+      -> a method for verifying whether a block is valid
+      -> a method for obtaining the genesis block
+-> simblock.node.consensus.ProofOfWork
+   -> Extension of AbstractConsensusAlgo for PoW
+   -> The mining process is abstracted through the use of an equation that estimates the time taken to mine, given the miningPower and the difficulty. (TODO: re-read the section of the paper that explains why this abstraction is valid)
+   -> Block validation consists in verifying the difficulty and chain.
+-> simblock.node.consensus.SampleProofOfStake
+   -> Extension of AbstractConsensusAlgo for PoS
+   -> I didn't fully understand the abstraction chosen to represent the minting process. An expected duration is obtained given the stake in regards to the difficulty.
+   -> Block validation consists in verifying the difficulty and chain.
+
+simblock.node.Node
+-> Representation of a node in the network
+-> Has an associated message queue, routing table and consensus algorithm
+-> Stores the current block and the set of known orphan nodes
+-> Message handling operations (however treated directly as events)
+-> Churn
+
+simblock.settings
+-> simblock.settings.NetworkConfiguration
+   -> Data for network latency, bandwidth and global distribution of nodes
+-> simblock.settings.SimulationConfiguration
+   -> Contains the parameters for the simulation
+
+simblock.simulator
+-> simblock.simulator.Network
+   -> Represents a network split in regions
+   -> Contains operations to calculate the latency between two nodes, given their region (this calculation is seeded)
+-> simblock.simulator.Simulator
+   -> Manages and observes the nodes and the block interval in the simulation
+-> simblock.simulator.Main
+   -> Main loop of the simulator
+   -> Contains the definition of the seed to be used
+   -> Constructs the network, initializing the nodes and routing tables
+   -> Selects a random node to be the minter of the genesis block (which leads to the generation of more events)
+   -> Loops through the events, until a specified END_BLOCK_HEIGHT is reached or there are no more events
+   -> Logs relevant information to file, in JSON (which can then be used in the visualizer)
+
+simblock.task
+-> Tasks are an alias for the events used in the discrete event simulator
+   -> InvMessageTask: sent by a node to propagate the information that a new block was observed
+   -> RecMessageTask: sent by a node to inform that he received the InvMessage
+   -> GetBlockTxnMessageTask: sent by a node to inform that he is missing transactions, upon receiving a CmpctBlockMessageTask
+   -> BlockMessageTask: sent by a node to propagate the content of a new block, as a response to RecMessageTask or GetBlockTxnMessageTask
+
+-------------------------------------------------------------------------
+
+Notes:
+-> The simulator requires changes to allow reproducibility
+   -> For example, in the BitcoinCoreTable, the links are chosen via Collections.shuffle, without presenting a seed. This is a simple fix, since this function can receive a seed as parameter.
+   -> In the Node class, upon receiving a CmpctBlockMessage, the random used should be seeded. In the getFailedBlockSize function, the random value should also be seeded.
+-> Transactions are completely abstracted.
+-> Things like block mining rewards are not modeled in the PoW implementation.
+-> Not a fan of how they handle the minting process of blocks. When a minting task (event) is processed, the event itselft calls the receiveBlock function on the minter node.
+-> There isn't a clear separation between simulator and the protocol being simulated. For example, the communication process (contained in the Node) is done explicitly via events (no interface to give the illusion for message passing, like a simple send or broadcast operation that "behind the scenes" produce the events).
+
+
+
+TO-DO to be able to simulate Algorand:
+-> Implement a way to abstract cryptographic sortition (selection of a node to propose a block on a specific round), or actually implement it.
+-> Add support for periodic events. Algorand is based on rounds, so the simulator needs a way of specifying the intervals where new rounds (and steps of each round) begin.
+-> Implement the necessary events/messages.
+-> Create a new node class, with additional state and operations (maybe not necessary, the state can be in the ConsensusAlgorithm since a node own a ConsensusAlgorithm object).
+
+
+-------------------------------------------------------------------------
