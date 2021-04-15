@@ -3,8 +3,11 @@ package simblock.task.algorand;
 import simblock.block.Block;
 import simblock.node.Node;
 import simblock.task.AbstractMessageTask;
+import simblock.task.BlockMessageTask;
 
-public class AlgorandBaseMsgTask extends AbstractMessageTask {
+import static simblock.settings.SimulationConfiguration.BLOCK_SIZE;
+
+public class AlgorandMsgTask extends BlockMessageTask {
 
     private AlgorandMsgType type;
     private int round, period, step;
@@ -20,8 +23,8 @@ public class AlgorandBaseMsgTask extends AbstractMessageTask {
      * @param period period vote refers to
      * @param step   step vote refers to
      */
-    public AlgorandBaseMsgTask(Node from, Node to, AlgorandMsgType t, int round, int period, int step, Block block) {
-        super(from, to);
+    public AlgorandMsgTask(Node from, Node to, AlgorandMsgType t, int round, int period, int step, Block block, long delay) {
+        super(from, to, block, delay);
         this.type = t;
         this.period = period;
         this.round = round;
