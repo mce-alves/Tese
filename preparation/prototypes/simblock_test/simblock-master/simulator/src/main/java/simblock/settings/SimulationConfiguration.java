@@ -35,9 +35,8 @@ public class SimulationConfiguration {
   /**
    * The consensus algorithm to be used.
    */
-  //TODO not documented in markdown
-  // TODO return to PoW
-  public static final String ALGO = "simblock.node.consensus.ProofOfWork";
+  // TODO(miguel) changed from PoW to AlgorandConsensus
+  public static final String ALGO = "simblock.node.consensus.AlgorandConsensus";
 
   /**
    * The expected value of block generation interval. The difficulty of mining is automatically
