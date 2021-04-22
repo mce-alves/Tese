@@ -5,11 +5,13 @@ import simblock.auxiliary.Pair;
 import simblock.block.Block;
 import simblock.block.SamplePoSBlock;
 import simblock.node.Node;
+import simblock.simulator.Main;
 import simblock.task.SampleStakingTask;
 import simblock.task.algorand.AlgorandIncStepTask;
 import simblock.task.algorand.AlgorandMsgTask;
 import simblock.task.algorand.AlgorandMsgType;
 
+import javax.management.relation.RelationNotFoundException;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -17,24 +19,25 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 import static simblock.settings.SimulationConfiguration.BLOCK_SIZE;
+import static simblock.settings.SimulationConfiguration.NUM_OF_NODES;
 import static simblock.simulator.Network.getBandwidth;
+import static simblock.simulator.Timer.getCurrentTime;
 import static simblock.simulator.Timer.putTask;
-
-// TODO(miguel) change steps in events from integers to enums
 
 public class AlgorandConsensus extends AbstractConsensusAlgo {
 
-    // TODO(miguel) check the values for the constants (pages 11 and 12)
+    // TODO(miguel) check what are appropriate values for the constants (pages 11 and 12)
     //  https://people.csail.mit.edu/nickolai/papers/gilad-algorand-eprint.pdf
     // The constant used in computing the deadlines for each step in the protocol (milliseconds)
-    private static final long LAMBDA = 100;
+    public static final long LAMBDA = 1000;
     // Committee size for each step
-    private static final long T = 20;
+    public static final long T = 20;
     // Voting threshold (usually 2/3 majority)
-    private static final long REQUIRED_VOTES = ((2/3) * T) + 1;
+    public static final long REQUIRED_VOTES = ((2/3) * T) + 1;
 
     /**
      * round: node's current round
@@ -65,7 +68,6 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     private Block startingValue;
     private Pair<Boolean, Block> certVoted;
     private ArrayList<Block> blocks; //TODO(miguel) stop using this (storing information twice?)
-    private boolean canAdvanceRound;
 
     public AlgorandConsensus(Node selfNode) {
         super(selfNode);
@@ -84,7 +86,6 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         this.startingValue = null;
         this.certVoted = new Pair(false, null);
         this.blocks = new ArrayList<>();
-        this.canAdvanceRound = false;
     }
 
     @Override
@@ -94,7 +95,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
 
     @Override
     public boolean isReceivedBlockValid(Block receivedBlock, Block currentBlock) {
-        // FROM SampleProofOfStake
+        // Copied FROM SampleProofOfStake class
         if (!(receivedBlock instanceof SamplePoSBlock)) {
             return false;
         }
@@ -123,22 +124,50 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
 
     // Step 1 of the Agreement Protocol
     public void valueProposal() {
+        // TODO(miguel) cleanup duplicate code in the coin flips
         if(step == 1) {
-            if(tryAdvanceRound()) {
-                // new round, meaning period = 1, so node is free to propose anything (if he is selected to propose)
-                // TODO(miguel) requires the sortition function to be implemented
-                //broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
+            if(period == 1) {
+                // if period = 1, then node is free to propose anything (if he is selected to propose)
+                if(selectedBySortition(getSelfNode().getNodeID())) {
+                    if(round == 1) {
+                        // if chosen to propose in the first round, then propose the genesis block
+                        startingValue = genesisBlock();
+                        broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
+                    }
+                    else {
+                        // create a block that extends the current head of the chain
+                        SamplePoSBlock parent = (SamplePoSBlock) getSelfNode().getBlock();
+                        startingValue = new SamplePoSBlock(parent, getSelfNode(), getCurrentTime(), parent.getNextDifficulty());
+                        // coin flip to abstract if it is able to create a block at this time
+                        if(Main.random.nextBoolean()) {
+                            broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
+                        }
+                    }
+                }
             }
             else {
                 Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
                 if(mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
-                    // if there was a block with more than REQUIRED_VOTES in the previous period, propose it
+                    // if there was a non-empty block with more than REQUIRED_VOTES in the previous period, propose it
                     broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, mostNextVotedBlock.second);
+                }
+                else {
+                    // otherwise, re-check if selected by sortition, and try to create a block to propose
+                    if(selectedBySortition(getSelfNode().getNodeID())) {
+                        SamplePoSBlock parent = (SamplePoSBlock) getSelfNode().getBlock();
+                        startingValue = new SamplePoSBlock(parent, getSelfNode(), getCurrentTime(), parent.getNextDifficulty());
+                        // coin flip to abstract if it is able to create a block at this time
+                        if(Main.random.nextBoolean()) {
+                            broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
+                        }
+                    }
+
                 }
             }
             // if it was selected to propose and this is period=1, then proposal will be the node's created block
             // if the node wasn't selected to propose and it is period=1, then proposal will be its starting value
             // otherwise if period>1, the starting value will be V such that V received REQUIRED_VOTES in previous period
+            // if such a value doesn't exist, the node will recheck if it is selected to propose, and try to create a block
 
             putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 2));
         }
@@ -146,7 +175,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
 
     // Step 2 of the Agreement Protocol
     public void filteringStep() throws NoSuchAlgorithmException {
-        if(step == 2 && !canAdvanceRound) {
+        if(step == 2) {
             Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
             if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
                 // if period >= 2 and there was a non-empty block with more than REQUIRED_VOTES
@@ -163,7 +192,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
 
     // Step 3 of the Agreement Protocol
     public void certifyingStep() {
-        if(step == 3 && !canAdvanceRound) {
+        if(step == 3) {
             Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
             if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
                 // if there was a block with more than REQUIRED_VOTES softvotes in the current period, certvote for it
@@ -176,7 +205,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
 
     // Step 4 of the Agreement Protocol
     public void finishingStepOne() {
-        if(step == 4 && !canAdvanceRound) {
+        if(step == 4) {
             Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(nextvotes));
             if(certVoted.first) {
                 // if the node has certvoted for a block in this period, nextvote for that same block
@@ -196,7 +225,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
 
     // Step 5 of the Agreement Protocol
     public void finishingStepTwo() {
-        if(step == 5 && !canAdvanceRound) {
+        if(step == 5) {
             Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
             Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
             if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
@@ -225,13 +254,14 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
 
     // The halting condition for the Agreement Protocol
     // Called when the node emits or receives a certvote
+    // Upon success advances the state to the next round
     public boolean haltingCondition() {
         Pair<Boolean, Block> mostCertVotedBlock = mostVoted(countVotes(certvotes));
         if(mostCertVotedBlock.first) {
             // if there is a block with more than REQUIRED_VOTES certvotes, then consensus was reached
             // and that block can be added to the chain
             getSelfNode().addToChain(mostCertVotedBlock.second);
-            canAdvanceRound = true;
+            advanceRound();
             return true;
         }
         return false;
@@ -245,6 +275,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Store a received message in the correct list, if it can be processed at the moment (otherwise store in queue)
     // This function will be called in the Node's "receiveMessage" function
     public void processMessage(AlgorandMsgTask msg) {
+        // TODO(miguel) propagate messages that are not duplicates to the node's neighbours
         if(msg.getPeriod() > period) {
             // message is for a future period, so should not be processed yet
             mQueue.add(msg);
@@ -326,18 +357,12 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         }
     }
 
-    // Advance to the next round, if possible
-    private boolean tryAdvanceRound() {
-        // round == 1 is because there is no need for agreement for the genesis block
-        if(round == 1 || canAdvanceRound) {
-            round += 1;
-            period = 1;
-            step = 1;
-            canAdvanceRound = false;
-            cleanData();
-            return true; // success
-        }
-        return false; // failed
+    // Advance to the next round
+    private void advanceRound() {
+        round += 1;
+        period = 1;
+        step = 1;
+        cleanData();
     }
 
     // Clean the data from the previous round
@@ -405,6 +430,13 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         }
         // also stores its own message, regardless of whether it is a vote or proposal
         processMessage(new AlgorandMsgTask(getSelfNode(), getSelfNode(), type, round, period, step, proposal, 0));
+    }
+
+    // Check if node was selected by sortition to propose in the current round
+    private boolean selectedBySortition(int nodeId) {
+        // Since all nodes will use the round as a seed, only one node will be selected per round
+        Random r = new Random(round);
+        return (r.nextInt(NUM_OF_NODES) + 1) == nodeId;
     }
 
     // Increment period updating corresponding state
