@@ -271,7 +271,6 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Store a received message in the correct list, if it can be processed at the moment (otherwise store in queue)
     // This function will be called in the Node's "receiveMessage" function
     public void processMessage(AlgorandMsgTask msg) {
-        // TODO(miguel) propagate messages that are not duplicates to the node's neighbours
         if(msg.getPeriod() > period) {
             // message is for a future period, so should not be processed yet
             mQueue.add(msg);
@@ -279,15 +278,16 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
             // ignore super late messages (shouldn't happen, but just to be safe)
             return;
         }
+        boolean isDuplicate = false;
         switch(msg.getType()) {
             case CERTVOTE:
-                addNoDuplicate(msg, certvotes);
+                isDuplicate = addNoDuplicate(msg, certvotes);
                 if(haltingCondition()) {
                     putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 1));
                 }
                 break;
             case NEXTVOTE:
-                addNoDuplicate(msg, msg.getPeriod() == period-1 ? prevnextvotes : nextvotes);
+                isDuplicate = addNoDuplicate(msg, msg.getPeriod() == period-1 ? prevnextvotes : nextvotes);
                 Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(nextvotes));
                 if(mostNextVotedBlock.first) {
                     // If the node sees more than REQUIRED_VOTES for a block B in the current period, it starts the next
@@ -298,13 +298,17 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
                 }
                 break;
             case SOFTVOTE:
-                addNoDuplicate(msg, msg.getPeriod() == period-1 ? prevsoftvotes : softvotes);
+                isDuplicate = addNoDuplicate(msg, msg.getPeriod() == period-1 ? prevsoftvotes : softvotes);
                 break;
             case PROPOSAL:
-                addNoDuplicate(msg, proposals);
+                isDuplicate = addNoDuplicate(msg, proposals);
                 break;
             default:
                 break;
+        }
+        if(!isDuplicate) {
+            // propagate new messages to neighbors
+            propagateMessage(msg);
         }
     }
 
@@ -337,15 +341,17 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     }
 
     // Add a message to a list, if it doesn't already contain a message from the same node
-    private void addNoDuplicate(AlgorandMsgTask msg, ArrayList<AlgorandMsgTask> list) {
+    // Returns true if the message is a duplicate. Returns false otherwise.
+    private boolean addNoDuplicate(AlgorandMsgTask msg, ArrayList<AlgorandMsgTask> list) {
         for(AlgorandMsgTask in : list) {
             if(in.getFrom().getNodeID() == msg.getFrom().getNodeID()) {
                 // do nothing if already received from that node
-                return;
+                return true; // is duplicate
             }
         }
         // if haven't received, add msg to list
         list.add(msg);
+        return false; // is not duplicate
     }
 
     public void runStep(AlgorandIncStepTask msg) {
@@ -459,6 +465,15 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         }
         // also stores its own message, regardless of whether it is a vote or proposal
         processMessage(new AlgorandMsgTask(getSelfNode(), getSelfNode(), type, round, period, step, proposal, 0));
+    }
+
+    private void propagateMessage(AlgorandMsgTask m) {
+        // propagate a received message to its neighbors
+        for (Node to : getSelfNode().getRoutingTable().getNeighbors()) {
+            long bandwidth = getBandwidth(getSelfNode().getRegion(), to.getRegion()); // copied from Node "sendNextBlockMessage"
+            long delay = BLOCK_SIZE * 8 / (bandwidth / 1000) + 2; // copied from Node "sendNextBlockMessage"
+            putTask(new AlgorandMsgTask(m.getFrom(), to, m.getType(), m.getRound(), m.getPeriod(), m.getStep(), m.getBlock(), delay));
+        }
     }
 
     // Check if node was selected by sortition to propose in the current round
