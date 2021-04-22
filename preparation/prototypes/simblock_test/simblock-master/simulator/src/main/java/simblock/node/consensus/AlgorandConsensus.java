@@ -130,22 +130,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
             // if period = 1, then node is free to propose anything (if he is selected to propose)
             if(selectedBySortition(getSelfNode().getNodeID())) {
                 log("Selected to propose.");
-                if(round == 1) {
-                    // if chosen to propose in the first round, then propose the genesis block
-                    startingValue = genesisBlock();
-                    broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
-                    log("Proposing genesis block.");
-                }
-                else {
-                    // create a block that extends the current head of the chain
-                    SamplePoSBlock parent = (SamplePoSBlock) getSelfNode().getBlock();
-                    startingValue = new SamplePoSBlock(parent, getSelfNode(), getCurrentTime(), parent.getNextDifficulty());
-                    // coin flip to abstract if it is able to create a block at this time
-                    if(Main.random.nextBoolean()) {
-                        broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
-                        log("Proposing new block with id="+startingValue.getId());
-                    }
-                }
+                createAndProposeBlock();
             }
         }
         else {
@@ -159,13 +144,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
                 // otherwise, re-check if selected by sortition, and try to create a block to propose
                 if(selectedBySortition(getSelfNode().getNodeID())) {
                     log("Selected to propose.");
-                    SamplePoSBlock parent = (SamplePoSBlock) getSelfNode().getBlock();
-                    startingValue = new SamplePoSBlock(parent, getSelfNode(), getCurrentTime(), parent.getNextDifficulty());
-                    // coin flip to abstract if it is able to create a block at this time
-                    if(Main.random.nextBoolean()) {
-                        broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
-                        log("Proposing new block with id="+startingValue.getId());
-                    }
+                    createAndProposeBlock();
                 }
 
             }
@@ -329,6 +308,25 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         }
     }
 
+    private void createAndProposeBlock() {
+        if(round == 1) {
+            // if chosen to propose in the first round, then propose the genesis block
+            startingValue = genesisBlock();
+            broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
+            log("Proposing genesis block.");
+        }
+        else {
+            // create a block that extends the current head of the chain
+            SamplePoSBlock parent = (SamplePoSBlock) getSelfNode().getBlock();
+            startingValue = new SamplePoSBlock(parent, getSelfNode(), getCurrentTime(), parent.getNextDifficulty());
+            // coin flip to abstract if it is able to create a block at this time
+            if(Main.random.nextBoolean()) {
+                broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
+                log("Proposing new block with id="+startingValue.getId());
+            }
+        }
+    }
+
     // Process valid messages for the current period that are in the queue
     private void processMessageQueue() {
         // This is valid because if the message is not processed, it gets added again to the end of the queue
@@ -405,7 +403,13 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         // create an array with all the block ids contained in the votes
         int i = 0;
         for(AlgorandMsgTask vote : votes) {
-            blockIds[i] = vote.getBlock().getId();
+            if(vote.getBlock() != null) {
+                blockIds[i] = vote.getBlock().getId();
+            }
+            else {
+                // the vote is for the empty block
+                blockIds[i] = -1;
+            }
             i++;
         }
 
@@ -429,8 +433,13 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
             }
         }
 
-        // if it obtained more than the required votes, return the block with the corresponding id
+        // if it obtained more than the required votes, return the block according to the id
         if(mostVotes >= REQUIRED_VOTES) {
+            // if the id correspond to the empty block (-1)
+            if(mostVotedId == -1) {
+                return new Pair<>(true, null);
+            }
+            // otherwise return the block with the corresponding id
             for(Block b : blocks) {
                 if(b.getId() == mostVotedId) {
                     return new Pair<>(true, b);

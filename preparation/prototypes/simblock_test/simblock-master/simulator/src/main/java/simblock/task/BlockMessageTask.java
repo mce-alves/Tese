@@ -73,7 +73,10 @@ public class BlockMessageTask extends AbstractMessageTask {
     OUT_JSON_FILE.print("\"reception-timestamp\":" + getCurrentTime() + ",");
     OUT_JSON_FILE.print("\"begin-node-id\":" + getFrom().getNodeID() + ",");
     OUT_JSON_FILE.print("\"end-node-id\":" + getTo().getNodeID() + ",");
-    OUT_JSON_FILE.print("\"block-id\":" + block.getId());
+    // necessary because Algorand might exchange empty blocks during the agreement protocol
+    if(block != null) {
+      OUT_JSON_FILE.print("\"block-id\":" + block.getId());
+    }
     OUT_JSON_FILE.print("}");
     OUT_JSON_FILE.print("},");
     OUT_JSON_FILE.flush();
