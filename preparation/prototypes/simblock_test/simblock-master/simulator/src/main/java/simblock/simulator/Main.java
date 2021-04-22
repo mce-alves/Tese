@@ -19,7 +19,9 @@ package simblock.simulator;
 
 import simblock.block.Block;
 import simblock.node.*;
+import simblock.node.consensus.AlgorandConsensus;
 import simblock.task.AbstractMintingTask;
+import simblock.task.algorand.AlgorandIncStepTask;
 
 import java.io.*;
 import java.net.URI;
@@ -119,7 +121,6 @@ public class Main {
           break;
         }
         // Log every 100 blocks and at the second block
-        // TODO use constants here
         if (currentBlockHeight % 100 == 0 || currentBlockHeight == 2) {
           writeGraph(currentBlockHeight);
         }
@@ -131,7 +132,6 @@ public class Main {
     // Print propagation information about all blocks
     printAllPropagation();
 
-    //TODO logger
     System.out.println();
 
     Set<Block> blocks = new HashSet<>();
@@ -313,7 +313,7 @@ public class Main {
     List<Boolean> useCBRNodes = makeRandomList(CBR_USAGE_RATE);
 
     // List of churn nodes.
-		List<Boolean> churnNodes = makeRandomList(CHURN_NODE_RATE);
+    List<Boolean> churnNodes = makeRandomList(CHURN_NODE_RATE);
 
     for (int id = 1; id <= numNodes; id++) {
       // Each node gets assigned a region, its degree, mining power, routing table and
@@ -343,7 +343,12 @@ public class Main {
     }
 
     // Designates a random node (nodes in list are randomized) to mint the genesis block
-    getSimulatedNodes().get(0).genesisBlock();
+    //getSimulatedNodes().get(0).genesisBlock();
+
+    for(Node node : getSimulatedNodes()) {
+      // Triggers the start of the protocol for all nodes
+      putTask(new AlgorandIncStepTask(node, 2*AlgorandConsensus.LAMBDA, 1));
+    }
   }
 
   /**
