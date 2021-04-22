@@ -146,6 +146,10 @@ public class Timer {
     }
   }
 
+  public static int getQueueSize() {
+    return taskQueue.size();
+  }
+
   /**
    * Schedule task to be executed at the current time incremented by the task duration.
    *

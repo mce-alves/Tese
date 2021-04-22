@@ -5,3 +5,4 @@ ocaml/blockchain/*.cmi
 ocaml/blockchain/*.cmo
 ocaml/blockchain/*.exe
 ocaml/blockchain/tmp/tmp.mli
+preparation/prototypes/simblock_test/simblock-master/test_output.txt

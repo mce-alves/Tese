@@ -17,6 +17,7 @@
 package simblock.simulator;
 
 
+import simblock.auxiliary.MyLogger;
 import simblock.block.Block;
 import simblock.node.*;
 import simblock.node.consensus.AlgorandConsensus;
@@ -27,6 +28,9 @@ import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.SimpleFormatter;
 
 import static simblock.settings.SimulationConfiguration.*;
 import static simblock.simulator.Network.*;
@@ -94,6 +98,9 @@ public class Main {
    * @param args the input arguments
    */
   public static void main(String[] args) {
+    MyLogger.setupHandler();
+    MyLogger.log("[MAIN] Starting simulation...");
+
     final long start = System.currentTimeMillis();
     setTargetInterval(INTERVAL);
 
@@ -112,6 +119,7 @@ public class Main {
 
     // Iterate over tasks and handle
     while (getTask() != null) {
+      //MyLogger.log("[MAIN] Tasks in queue: "+getQueueSize());
       if (getTask() instanceof AbstractMintingTask) {
         AbstractMintingTask task = (AbstractMintingTask) getTask();
         if (task.getParent().getHeight() == currentBlockHeight) {

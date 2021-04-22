@@ -23,9 +23,8 @@ public class SimulationConfiguration {
   /**
    * The number of nodes participating in the blockchain network.
    */
-  //TODO revert
-  public static final int NUM_OF_NODES = 300;//600;//800;//6000;
-  // public static final int NUM_OF_NODES = 600;//600;//800;//6000;
+  //TODO(miguel) revert
+  public static final int NUM_OF_NODES = 20;//300;//600;//800;//6000;
 
   /**
    * The kind of routing table.
