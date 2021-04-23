@@ -38,7 +38,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Committee size for each step
     public static final long T = 20;
     // Voting threshold (usually 2/3 majority)
-    public static final long REQUIRED_VOTES = ((2/3) * T) + 1;
+    public static final long REQUIRED_VOTES = 15;
 
     /**
      * round: node's current round
@@ -253,6 +253,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
                 startingValue = nextVotedBlock.second;
                 nextPeriod();
                 putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 1));
+                return;
             }
             putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 5));
         }
@@ -263,7 +264,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Upon success advances the state to the next round
     public boolean haltingCondition() {
         Pair<Boolean, Block> mostCertVotedBlock = mostVoted(countVotes(certvotes));
-        if(mostCertVotedBlock.first) {
+        if(mostCertVotedBlock.first && mostCertVotedBlock.second != null) {
             log("Reached halting condition. Adding block with id="+mostCertVotedBlock.second.getId()+" to chain. Advancing round.");
             // if there is a block with more than REQUIRED_VOTES certvotes, then consensus was reached
             // and that block can be added to the chain
@@ -282,12 +283,13 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Store a received message in the correct list, if it can be processed at the moment (otherwise store in queue)
     // This function will be called in the Node's "receiveMessage" function
     public void processMessage(AlgorandMsgTask msg) {
-        if(msg.getPeriod() > period) {
-            // message is for a future period, so should not be processed yet
-            mQueue.add(msg);
+        if(msg.getRound() < round || msg.getPeriod() < period - 1) {
+            // ignore late messages (shouldn't happen, but just to be safe)
             return;
-        } else if(msg.getPeriod() < period - 1) {
-            // ignore super late messages (shouldn't happen, but just to be safe)
+        }
+        if(msg.getPeriod() > period || msg.getRound() > round) {
+            // message is for a future period/round, so should not be processed yet
+            mQueue.add(msg);
             return;
         }
         boolean isDuplicate = false;
