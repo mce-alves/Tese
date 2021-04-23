@@ -68,7 +68,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     private ArrayList<AlgorandMsgTask> mQueue, proposals, softvotes, certvotes, nextvotes, prevsoftvotes, prevnextvotes;
     private Block startingValue;
     private Pair<Boolean, Block> certVoted;
-    private ArrayList<Block> blocks; //TODO(miguel) stop using this (storing information twice?)
+    private ArrayList<Block> blocks;
 
     public AlgorandConsensus(Node selfNode) {
         super(selfNode);
@@ -106,7 +106,6 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         SamplePoSBlock receivedBlockParent = receivedBlockHeight == 0 ? null :
                 (SamplePoSBlock) receivedBlock.getBlockWithHeight(receivedBlockHeight - 1);
 
-        //TODO - dangerous to split due to short circuit operators being used, refactor?
         return (
                 receivedBlockHeight == 0 ||
                         recPoSBlock.getDifficulty().compareTo(receivedBlockParent.getNextDifficulty()) >= 0
@@ -125,126 +124,138 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
 
     // Step 1 of the Agreement Protocol
     public void valueProposal() {
-        // TODO(miguel) cleanup duplicate code in the coin flips
-        if(period == 1) {
-            // if period = 1, then node is free to propose anything (if he is selected to propose)
-            if(selectedBySortition(getSelfNode().getNodeID())) {
-                log("Selected to propose.");
-                createAndProposeBlock();
-            }
-        }
-        else {
-            Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
-            if(mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
-                // if there was a non-empty block with more than REQUIRED_VOTES in the previous period, propose it
-                broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, mostNextVotedBlock.second);
-                log("Proposing non-empty with majority votes from previous period. Block id="+mostNextVotedBlock.second.getId());
-            }
-            else {
-                // otherwise, re-check if selected by sortition, and try to create a block to propose
+        if(step == 1) {
+            if(period == 1) {
+                // if period = 1, then node is free to propose anything (if he is selected to propose)
                 if(selectedBySortition(getSelfNode().getNodeID())) {
                     log("Selected to propose.");
                     createAndProposeBlock();
                 }
-
             }
-        }
-        // if it was selected to propose and this is period=1, then proposal will be the node's created block
-        // if the node wasn't selected to propose and it is period=1, then proposal will be its starting value
-        // otherwise if period>1, the starting value will be V such that V received REQUIRED_VOTES in previous period
-        // if such a value doesn't exist, the node will recheck if it is selected to propose, and try to create a block
+            else {
+                Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
+                if(mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
+                    // if there was a non-empty block with more than REQUIRED_VOTES in the previous period, propose it
+                    log("Proposing non-empty with majority votes from previous period. Block id="+mostNextVotedBlock.second.getId());
+                    broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, mostNextVotedBlock.second);
+                }
+                else {
+                    // otherwise, re-check if selected by sortition, and try to create a block to propose
+                    if(selectedBySortition(getSelfNode().getNodeID())) {
+                        log("Selected to propose.");
+                        createAndProposeBlock();
+                    }
 
-        putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 2));
-        step++;
+                }
+            }
+            // if it was selected to propose and this is period=1, then proposal will be the node's created block
+            // if the node wasn't selected to propose and it is period=1, then proposal will be its starting value
+            // otherwise if period>1, the starting value will be V such that V received REQUIRED_VOTES in previous period
+            // if such a value doesn't exist, the node will recheck if it is selected to propose, and try to create a block
+
+            putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 2));
+            step++;
+        }
     }
 
     // Step 2 of the Agreement Protocol
     public void filteringStep() throws NoSuchAlgorithmException {
-        Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
-        if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
-            // if period >= 2 and there was a non-empty block with more than REQUIRED_VOTES
-            broadcastProtocolMessage(AlgorandMsgType.SOFTVOTE, round, period, step, mostNextVotedBlock.second);
-            log("Soft Voting for the block with majority Next Votes from previous period. Block id="+mostNextVotedBlock.second.getId());
-        }
-        else {
-            // identify the leader for this period
-            // the leader is the node whose credential's hash is smallest, in case of multiple proposers
-            Block leaderProposal = findLeaderProposal();
-            broadcastProtocolMessage(AlgorandMsgType.SOFTVOTE, round, period, step, leaderProposal);
-            if(leaderProposal != null) {
-                log("Soft Voting for the block proposed by the identified leader. Block id="+leaderProposal.getId()+". Leader id="+leaderProposal.getMinter().getNodeID());
+        if(step == 2) {
+            Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
+            if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
+                // if period >= 2 and there was a non-empty block with more than REQUIRED_VOTES
+                log("Soft Voting for the block with majority Next Votes from previous period. Block id="+mostNextVotedBlock.second.getId());
+                broadcastProtocolMessage(AlgorandMsgType.SOFTVOTE, round, period, step, mostNextVotedBlock.second);
             }
             else {
-                // this node has not seen any proposals
-                log("Soft Voting for the empty block, since no leader proposals were found.");
+                // identify the leader for this period
+                // the leader is the node whose credential's hash is smallest, in case of multiple proposers
+                Block leaderProposal = findLeaderProposal();
+                if(leaderProposal != null) {
+                    log("Soft Voting for the block proposed by the identified leader. Block id="+leaderProposal.getId()+". Leader id="+leaderProposal.getMinter().getNodeID());
+                }
+                else {
+                    // this node has not seen any proposals
+                    log("Soft Voting for the empty block, since no leader proposals were found.");
+                }
+                broadcastProtocolMessage(AlgorandMsgType.SOFTVOTE, round, period, step, leaderProposal);
             }
+            putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 3));
+            step++;
         }
-        putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 3));
-        step++;
     }
 
     // Step 3 of the Agreement Protocol
     public void certifyingStep() {
-        Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
-        if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
-            // if there was a block with more than REQUIRED_VOTES softvotes in the current period, certvote for it
-            certVoted = new Pair<>(true, mostSoftVotedBlock.second);
-            broadcastProtocolMessage(AlgorandMsgType.CERTVOTE, round, period, step, certVoted.second);
-            log("Cert Voting for the block that received majority Soft Votes. Block id="+certVoted.second.getId());
+        if(step == 3) {
+            Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
+            if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
+                // if there was a block with more than REQUIRED_VOTES softvotes in the current period, certvote for it
+                certVoted = new Pair<>(true, mostSoftVotedBlock.second);
+                log("Cert Voting for the block that received majority Soft Votes. Block id="+certVoted.second.getId());
+                broadcastProtocolMessage(AlgorandMsgType.CERTVOTE, round, period, step, certVoted.second);
+            }
+            else {
+                log("Did not see any block with majority of Soft Votes, so not Cert Voting for any block.");
+            }
+            putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 4));
+            step++;
         }
-        putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 4));
-        step++;
     }
 
     // Step 4 of the Agreement Protocol
     public void finishingStepOne() {
-        Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(nextvotes));
-        if(certVoted.first) {
-            // if the node has certvoted for a block in this period, nextvote for that same block
-            broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, certVoted.second);
-            log("Next Voting for the block that I Cert Voted. Block id="+certVoted.second.getId());
+        if(step == 4) {
+            Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(nextvotes));
+            if(certVoted.first) {
+                // if the node has certvoted for a block in this period, nextvote for that same block
+                log("Next Voting for the block that I Cert Voted. Block id="+certVoted.second.getId());
+                broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, certVoted.second);
+            }
+            else if(period >=2 && mostNextVotedBlock.first && mostNextVotedBlock.second == null) {
+                // if the node has seen a majority of nextvotes for the empty block, nextvote the empty block
+                log("Next Voting for the empty block, since I have seen a majority of Next Votes for it.");
+                broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, null);
+            }
+            else {
+                // otherwise, the node sends a nextvote with its starting value
+                log("Next Voting my starting value.");
+                broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, startingValue);
+            }
+            putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 5));
+            step++;
         }
-        else if(period >=2 && mostNextVotedBlock.first && mostNextVotedBlock.second == null) {
-            // if the node has seen a majority of nextvotes for the empty block, nextvote the empty block
-            broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, null);
-            log("Next Voting for the empty block, since I have seen a majority of Next Votes for it.");
-        }
-        else {
-            // otherwise, the node sends a nextvote with its starting value
-            broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, startingValue);
-            log("Next Voting my starting value.");
-        }
-        putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 5));
-        step++;
     }
 
     // Step 5 of the Agreement Protocol
     public void finishingStepTwo() {
-        Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
-        Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
-        if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
-            // if the most voted block that received REQUIRED_VOTES is not empty, nextvote it
-            broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, mostSoftVotedBlock.second);
-            log("Next Voting for the non-empty block that received the most Soft Votes. Block id="+mostSoftVotedBlock.second.getId());
+        if(step == 5) {
+            Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
+            Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
+            if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
+                // if the most voted block that received REQUIRED_VOTES is not empty, nextvote it
+                log("Next Voting for the non-empty block that received the most Soft Votes. Block id="+mostSoftVotedBlock.second.getId());
+                broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, mostSoftVotedBlock.second);
+            }
+            else if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second == null && !certVoted.first) {
+                // if the node hasn't certvoted and sees a majority of softvotes for empty block, nextvote empty block
+                log("Next Voting for the empty block since I have not Cert Voted a block and didn't see a non-empty block with majority of Soft Votes.");
+                broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, null);
+            }
+            // check if node can finish the round
+            if(haltingCondition()) {
+                putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 1));
+                return;
+            }
+            // check if node can finish the period
+            Pair<Boolean, Block> nextVotedBlock = mostVoted(countVotes(nextvotes));
+            if(nextVotedBlock.first) {
+                startingValue = nextVotedBlock.second;
+                nextPeriod();
+                putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 1));
+            }
+            putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 5));
         }
-        else if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second == null && !certVoted.first) {
-            // if the node hasn't certvoted and sees a majority of softvotes for empty block, nextvote empty block
-            broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, null);
-            log("Next Voting for the empty block since I have not Cert Voted a block and didn't see a non-empty block with majority of Soft Votes.");
-        }
-        // check if node can finish the round
-        if(haltingCondition()) {
-            putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 1));
-            return;
-        }
-        // check if node can finish the period
-        Pair<Boolean, Block> nextVotedBlock = mostVoted(countVotes(nextvotes));
-        if(nextVotedBlock.first) {
-            startingValue = nextVotedBlock.second;
-            nextPeriod();
-            putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 1));
-        }
-        putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 5));
     }
 
     // The halting condition for the Agreement Protocol
@@ -274,6 +285,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         if(msg.getPeriod() > period) {
             // message is for a future period, so should not be processed yet
             mQueue.add(msg);
+            return;
         } else if(msg.getPeriod() < period - 1) {
             // ignore super late messages (shouldn't happen, but just to be safe)
             return;
@@ -292,6 +304,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
                 if(mostNextVotedBlock.first) {
                     // If the node sees more than REQUIRED_VOTES for a block B in the current period, it starts the next
                     // period and uses B as its starting value
+                    log("Received majority of Next Votes");
                     startingValue = mostNextVotedBlock.second;
                     nextPeriod();
                     putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 1));
@@ -307,6 +320,8 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
                 break;
         }
         if(!isDuplicate) {
+            // register the seen block, if it has not yet been registered
+            registerBlock(msg.getBlock());
             // propagate new messages to neighbors
             propagateMessage(msg);
         }
@@ -316,8 +331,8 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         if(round == 1) {
             // if chosen to propose in the first round, then propose the genesis block
             startingValue = genesisBlock();
-            broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
             log("Proposing genesis block.");
+            broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
         }
         else {
             // create a block that extends the current head of the chain
@@ -325,8 +340,8 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
             startingValue = new SamplePoSBlock(parent, getSelfNode(), getCurrentTime(), parent.getNextDifficulty());
             // coin flip to abstract if it is able to create a block at this time
             if(Main.random.nextBoolean()) {
-                broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
                 log("Proposing new block with id="+startingValue.getId());
+                broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
             }
         }
     }
@@ -518,6 +533,22 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         }
 
         return fromLeader;
+    }
+
+    // register a new seen block in the round
+    private void registerBlock(Block b) {
+        if(b == null) {
+            // if it is the empty block, return
+            return;
+        }
+        for(Block x : blocks) {
+            if(x.getId() == b.getId()) {
+                // if the block is already registered, return
+                return;
+            }
+        }
+        // otherwise, register the block
+        blocks.add(b);
     }
 
     private void log(String m) {
