@@ -12,6 +12,7 @@ public class AlgorandMsgTask extends BlockMessageTask {
     private AlgorandMsgType type;
     private int round, period, step;
     private Block block;
+    private Node voteFrom;
 
     /**
      * Instantiates a new Vote message task.
@@ -23,13 +24,14 @@ public class AlgorandMsgTask extends BlockMessageTask {
      * @param period period vote refers to
      * @param step   step vote refers to
      */
-    public AlgorandMsgTask(Node from, Node to, AlgorandMsgType t, int round, int period, int step, Block block, long delay) {
+    public AlgorandMsgTask(Node from, Node to, AlgorandMsgType t, int round, int period, int step, Block block, long delay, Node voteFrom) {
         super(from, to, block, delay);
         this.type = t;
         this.period = period;
         this.round = round;
         this.step = step;
         this.block = block;
+        this.voteFrom = voteFrom;
     }
 
     public AlgorandMsgType getType() {  return type; }
@@ -41,4 +43,6 @@ public class AlgorandMsgTask extends BlockMessageTask {
     public int getStep() { return step; }
 
     public Block getBlock() { return this.block; }
+
+    public Node getVoteFrom() { return this.voteFrom; }
 }

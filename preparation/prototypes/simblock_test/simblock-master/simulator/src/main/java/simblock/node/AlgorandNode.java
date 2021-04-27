@@ -1,5 +1,6 @@
 package simblock.node;
 
+import simblock.block.Block;
 import simblock.node.consensus.AbstractConsensusAlgo;
 import simblock.node.consensus.AlgorandConsensus;
 import simblock.task.AbstractMessageTask;
@@ -7,6 +8,8 @@ import simblock.task.AbstractMintingTask;
 import simblock.task.algorand.AlgorandIncStepTask;
 import simblock.task.algorand.AlgorandMsgTask;
 
+import static simblock.simulator.Main.OUT_JSON_FILE;
+import static simblock.simulator.Timer.getCurrentTime;
 import static simblock.simulator.Timer.putTask;
 
 public class AlgorandNode extends Node {

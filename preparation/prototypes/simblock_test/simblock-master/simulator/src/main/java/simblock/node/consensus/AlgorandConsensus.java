@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import static simblock.settings.SimulationConfiguration.BLOCK_SIZE;
 import static simblock.settings.SimulationConfiguration.NUM_OF_NODES;
+import static simblock.simulator.Main.OUT_JSON_FILE;
 import static simblock.simulator.Network.getBandwidth;
 import static simblock.simulator.Timer.getCurrentTime;
 import static simblock.simulator.Timer.putTask;
@@ -64,7 +65,6 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
      */
 
     private int round, period, step;
-    private long deadline, period_start;
     private ArrayList<AlgorandMsgTask> mQueue, proposals, softvotes, certvotes, nextvotes, prevsoftvotes, prevnextvotes;
     private Block startingValue;
     private Pair<Boolean, Block> certVoted;
@@ -75,8 +75,6 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         this.round = 1;
         this.period = 1;
         this.step = 1;
-        this.deadline = 0;
-        this.period_start = 0;
         this.proposals = new ArrayList<>();
         this.softvotes = new ArrayList<>();
         this.certvotes = new ArrayList<>();
@@ -334,16 +332,21 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
             // if chosen to propose in the first round, then propose the genesis block
             startingValue = genesisBlock();
             log("Proposing genesis block.");
+            printCreateBlock(startingValue);
             broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
         }
         else {
             // create a block that extends the current head of the chain
-            SamplePoSBlock parent = (SamplePoSBlock) getSelfNode().getBlock();
-            startingValue = new SamplePoSBlock(parent, getSelfNode(), getCurrentTime(), parent.getNextDifficulty());
             // coin flip to abstract if it is able to create a block at this time
             if(Main.random.nextBoolean()) {
+                SamplePoSBlock parent = (SamplePoSBlock) getSelfNode().getBlock();
+                startingValue = new SamplePoSBlock(parent, getSelfNode(), getCurrentTime(), parent.getNextDifficulty());
                 log("Proposing new block with id="+startingValue.getId());
+                printCreateBlock(startingValue);
                 broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
+            }
+            else {
+                startingValue = null;
             }
         }
     }
@@ -478,10 +481,10 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         for (Node to : getSelfNode().getRoutingTable().getNeighbors()) {
             long bandwidth = getBandwidth(getSelfNode().getRegion(), to.getRegion()); // copied from Node "sendNextBlockMessage"
             long delay = BLOCK_SIZE * 8 / (bandwidth / 1000) + 2; // copied from Node "sendNextBlockMessage"
-            putTask(new AlgorandMsgTask(getSelfNode(), to, type, round, period, step, proposal, delay));
+            putTask(new AlgorandMsgTask(getSelfNode(), to, type, round, period, step, proposal, delay, getSelfNode()));
         }
         // also stores its own message, regardless of whether it is a vote or proposal
-        processMessage(new AlgorandMsgTask(getSelfNode(), getSelfNode(), type, round, period, step, proposal, 0));
+        processMessage(new AlgorandMsgTask(getSelfNode(), getSelfNode(), type, round, period, step, proposal, 0, getSelfNode()));
     }
 
     private void propagateMessage(AlgorandMsgTask m) {
@@ -489,7 +492,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         for (Node to : getSelfNode().getRoutingTable().getNeighbors()) {
             long bandwidth = getBandwidth(getSelfNode().getRegion(), to.getRegion()); // copied from Node "sendNextBlockMessage"
             long delay = BLOCK_SIZE * 8 / (bandwidth / 1000) + 2; // copied from Node "sendNextBlockMessage"
-            putTask(new AlgorandMsgTask(m.getFrom(), to, m.getType(), m.getRound(), m.getPeriod(), m.getStep(), m.getBlock(), delay));
+            putTask(new AlgorandMsgTask(getSelfNode(), to, m.getType(), m.getRound(), m.getPeriod(), m.getStep(), m.getBlock(), delay, m.getFrom()));
         }
     }
 
@@ -555,6 +558,23 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
 
     private void log(String m) {
         MyLogger.log("[Node="+getSelfNode().getNodeID()+"|Round="+round+"|Period="+period+"|Step="+step+"]: " + m);
+    }
+
+    /**
+     * Logs the provided block to the logfile.
+     *
+     * @param block the block to be logged
+     */
+    private void printCreateBlock(Block block) {
+        OUT_JSON_FILE.print("{");
+        OUT_JSON_FILE.print("\"kind\":\"create-block\",");
+        OUT_JSON_FILE.print("\"content\":{");
+        OUT_JSON_FILE.print("\"timestamp\":" + getCurrentTime() + ",");
+        OUT_JSON_FILE.print("\"node-id\":" + getSelfNode().getNodeID() + ",");
+        OUT_JSON_FILE.print("\"block-id\":" + block.getId());
+        OUT_JSON_FILE.print("}");
+        OUT_JSON_FILE.print("},");
+        OUT_JSON_FILE.flush();
     }
 
 }
