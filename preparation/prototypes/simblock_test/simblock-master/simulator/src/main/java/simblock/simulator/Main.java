@@ -119,7 +119,7 @@ public class Main {
 
     // Iterate over tasks and handle
     while (getTask() != null) {
-      //MyLogger.log("[MAIN] Tasks in queue: "+getQueueSize());
+      /*
       if (getTask() instanceof AbstractMintingTask) {
         AbstractMintingTask task = (AbstractMintingTask) getTask();
         if (task.getParent().getHeight() == currentBlockHeight) {
@@ -131,6 +131,13 @@ public class Main {
         // Log every 100 blocks and at the second block
         if (currentBlockHeight % 100 == 0 || currentBlockHeight == 2) {
           writeGraph(currentBlockHeight);
+        }
+      }
+      */
+      if(getSimulatedNodes().get(0).getBlock() != null) {
+        if(getSimulatedNodes().get(0).getBlock().getHeight() > END_BLOCK_HEIGHT) {
+          // Stop the simulation if the heigh exceeds END_BLOCK_HEIGHT
+          break;
         }
       }
       // Execute task
