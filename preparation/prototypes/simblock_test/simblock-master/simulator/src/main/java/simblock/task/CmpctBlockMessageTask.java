@@ -66,6 +66,12 @@ public class CmpctBlockMessageTask extends AbstractMessageTask {
 
     this.getFrom().sendNextBlockMessage();
 
+    // necessary because otherwise the Visualizer crashes when propagating empty blocks
+    if(block == null) {
+      super.run();
+      return;
+    }
+
     OUT_JSON_FILE.print("{");
     OUT_JSON_FILE.print("\"kind\":\"flow-block\",");
     OUT_JSON_FILE.print("\"content\":{");
