@@ -557,7 +557,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     }
 
     private void log(String m) {
-        MyLogger.log("[Node="+getSelfNode().getNodeID()+"|Round="+round+"|Period="+period+"|Step="+step+"]: " + m);
+        MyLogger.log("[Node="+getSelfNode().getNodeID()+"|Round="+round+"|Period="+period+"|Step="+step+"]|Timestamp="+getCurrentTime()+": " + m);
     }
 
     /**
