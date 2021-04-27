@@ -364,7 +364,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Returns true if the message is a duplicate. Returns false otherwise.
     private boolean addNoDuplicate(AlgorandMsgTask msg, ArrayList<AlgorandMsgTask> list) {
         for(AlgorandMsgTask in : list) {
-            if(in.getFrom().getNodeID() == msg.getFrom().getNodeID()) {
+            if(in.getVoteFrom().getNodeID() == msg.getVoteFrom().getNodeID()) {
                 // do nothing if already received from that node
                 return true; // is duplicate
             }
@@ -492,7 +492,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         for (Node to : getSelfNode().getRoutingTable().getNeighbors()) {
             long bandwidth = getBandwidth(getSelfNode().getRegion(), to.getRegion()); // copied from Node "sendNextBlockMessage"
             long delay = BLOCK_SIZE * 8 / (bandwidth / 1000) + 2; // copied from Node "sendNextBlockMessage"
-            putTask(new AlgorandMsgTask(getSelfNode(), to, m.getType(), m.getRound(), m.getPeriod(), m.getStep(), m.getBlock(), delay, m.getFrom()));
+            putTask(new AlgorandMsgTask(getSelfNode(), to, m.getType(), m.getRound(), m.getPeriod(), m.getStep(), m.getBlock(), delay, m.getVoteFrom()));
         }
     }
 
@@ -522,7 +522,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         Block fromLeader = null; String minHash = ""; boolean firstIteration = true;
         String suffix = Integer.toString(round).concat(Integer.toString(period));
         for(AlgorandMsgTask proposal : proposals) {
-            String credential = Integer.toString(proposal.getFrom().getNodeID()) + suffix;
+            String credential = Integer.toString(proposal.getVoteFrom().getNodeID()) + suffix;
 
             // https://stackoverflow.com/a/3103722 -> calculating an hash in Java
             MessageDigest md = MessageDigest.getInstance("SHA-256");
