@@ -86,6 +86,18 @@ export default class Loader {
             );
           }
           break;
+        case "create-block":
+          {
+            // when a node creates a block that doesn't necessarily get added to its chain
+            const block = new Block(
+              this.worldMap,
+              content["timestamp"],
+              content["block-id"],
+              this.nodes[content["node-id"]]
+            );
+            blocks[parseInt(content["block-id"])] = block;
+          }
+          break;
         case "add-block":
           {
             const block = new Block(
