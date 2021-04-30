@@ -21,15 +21,14 @@ export default {
     return ys;
   },
 
-  colorForId: (id, totalBlocks) => {
+  colorForId: (id) => {
     if(id == -1) {
       return {r:100, g:100, b:100};
     }
-    // This function generates vibrant, "evenly spaced" colours (i.e. no clustering). This is ideal for creating easily distinguishable vibrant markers in Google Maps and other apps.
-    // Adam Cole, 2011-Sept-14
-    // HSV to RBG adapted from: http://mjijackson.com/2008/02/rgb-to-hsl-and-rgb-to-hsv-color-model-conversion-algorithms-in-javascript
+    // This code snippet was published by Adam Cole on 2011-Sept-14
+    // in StackOverflow: https://stackoverflow.com/a/7419630
     var r, g, b;
-    var h = id / totalBlocks;
+    var h = id / 10;
     var i = ~~(h * 6);
     var f = h * 6 - i;
     var q = 1 - f;
