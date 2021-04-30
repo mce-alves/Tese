@@ -6,6 +6,8 @@ import simblock.task.AbstractMessageTask;
 import simblock.task.BlockMessageTask;
 
 import static simblock.settings.SimulationConfiguration.BLOCK_SIZE;
+import static simblock.simulator.Main.OUT_JSON_FILE;
+import static simblock.simulator.Timer.getCurrentTime;
 
 public class AlgorandMsgTask extends BlockMessageTask {
 
@@ -45,4 +47,25 @@ public class AlgorandMsgTask extends BlockMessageTask {
     public Block getBlock() { return this.block; }
 
     public Node getVoteFrom() { return this.voteFrom; }
+
+    /**
+     * Overwriting the run method with the purpose of using a different event, so that it doesn't update the
+     * state of a node's chain in the visualizer
+     */
+    @Override
+    public void run() {
+        OUT_JSON_FILE.print("{");
+        OUT_JSON_FILE.print("\"kind\":\"flow-message\",");
+        OUT_JSON_FILE.print("\"content\":{");
+        OUT_JSON_FILE.print("\"transmission-timestamp\":" + (getCurrentTime() - super.getInterval()) + ",");
+        OUT_JSON_FILE.print("\"reception-timestamp\":" + getCurrentTime() + ",");
+        OUT_JSON_FILE.print("\"begin-node-id\":" + getFrom().getNodeID() + ",");
+        OUT_JSON_FILE.print("\"end-node-id\":" + getTo().getNodeID() + ",");
+        OUT_JSON_FILE.print("\"block-id\":" + (this.block == null ? -1 : block.getId()));
+        OUT_JSON_FILE.print("}");
+        OUT_JSON_FILE.print("},");
+        OUT_JSON_FILE.flush();
+
+        super.getTo().receiveMessage(this);
+    }
 }

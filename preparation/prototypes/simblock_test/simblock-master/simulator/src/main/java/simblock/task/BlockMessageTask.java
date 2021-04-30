@@ -66,12 +66,6 @@ public class BlockMessageTask extends AbstractMessageTask {
 
     this.getFrom().sendNextBlockMessage();
 
-    // necessary because otherwise the Visualizer crashes when propagating empty blocks
-    if(block == null) {
-      super.run();
-      return;
-    }
-
     OUT_JSON_FILE.print("{");
     OUT_JSON_FILE.print("\"kind\":\"flow-block\",");
     OUT_JSON_FILE.print("\"content\":{");
@@ -79,7 +73,7 @@ public class BlockMessageTask extends AbstractMessageTask {
     OUT_JSON_FILE.print("\"reception-timestamp\":" + getCurrentTime() + ",");
     OUT_JSON_FILE.print("\"begin-node-id\":" + getFrom().getNodeID() + ",");
     OUT_JSON_FILE.print("\"end-node-id\":" + getTo().getNodeID() + ",");
-    OUT_JSON_FILE.print("\"block-id\":" + block.getId());
+    OUT_JSON_FILE.print("\"block-id\":" + block==null ? -1 : block.getId());
     OUT_JSON_FILE.print("}");
     OUT_JSON_FILE.print("},");
     OUT_JSON_FILE.flush();
