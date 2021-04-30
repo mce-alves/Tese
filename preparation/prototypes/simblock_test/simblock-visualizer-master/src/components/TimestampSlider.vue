@@ -44,11 +44,11 @@ export default {
   },
   methods: {
     incrementStep: function() {
-      const val = this.value === this.maxStep ? this.minStep : this.value + 1;
+      const val = this.value === this.maxStep ? this.minStep : this.value + 10;
       this.$emit("input", val);
     },
     decrementStep: function() {
-      const val = this.value === this.minStep ? this.maxStep : this.value - 1;
+      const val = this.value === this.minStep ? this.maxStep : this.value - 10;
       this.$emit("input", val);
     }
   },
@@ -56,7 +56,7 @@ export default {
     setInterval(() => {
       if (!this.isRunning) return;
       this.incrementStep();
-    }, 33);
+    }, 50);
   }
 };
 </script>
