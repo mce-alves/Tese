@@ -7,6 +7,8 @@ export default class Node {
     this.id = id;
     this.region = region;
     this.blockList = [];
+    this.inCommittee = []; // list of rounds where this node was in the committee
+    this.proposing = []; // list of rounds where this node proposes the block
     this.selected = false;
     this.initPosition();
   }
@@ -37,7 +39,37 @@ export default class Node {
     ctx.lineWidth = 0.5;
     ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${1})`;
     ctx.stroke();
+    if(this.proposing.includes(blockId+1)) {
+      ctx.beginPath();
+      ctx.fillStyle = "black";
+      ctx.fillText("P", pos.x - (this.getRadius(timestamp)/4), pos.y + (this.getRadius(timestamp)/4));
+      ctx.strokeStyle = "black";
+      ctx.strokeText("P", pos.x - (this.getRadius(timestamp)/4), pos.y + (this.getRadius(timestamp)/4));
+      ctx.fill();
+      ctx.stroke();
+    }
+    else if(this.inCommittee.includes(blockId+1)) {
+      ctx.beginPath();
+      ctx.fillStyle = "black";
+      ctx.fillText("C", pos.x - (this.getRadius(timestamp)/4), pos.y + (this.getRadius(timestamp)/4));
+      ctx.strokeStyle = "black";
+      ctx.strokeText("C", pos.x - (this.getRadius(timestamp)/4), pos.y + (this.getRadius(timestamp)/4));
+      ctx.fill();
+      ctx.stroke();
+    }
     ctx.closePath();
+  }
+
+  addCommitteeMembership(round) {
+    if(!this.inCommittee(round)) {
+      this.inCommittee.push(round);
+    }
+  }
+
+  addProposerRound(round) {
+    if(!this.proposing(round)) {
+      this.proposing.push(round);
+    }
   }
 
   collide(mouseX, mouseY, timestamp) {
@@ -49,6 +81,13 @@ export default class Node {
   }
 
   getRadius(timestamp) {
+    const block = this.getBlock(timestamp);
+    return (
+      4.5 * (this.selected ? 1.2 : 1.0) * 2.0
+    );
+  }
+
+  oldGetRadius(timestamp) {
     const block = this.getBlock(timestamp);
     return (
       4.5 * (this.selected ? 1.2 : 1.0) * (this.isMiner(block) ? 3.0 : 1.0)

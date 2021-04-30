@@ -64,6 +64,18 @@ export default class Loader {
     for (const value of dynamicData) {
       const content = value["content"];
       switch (value["kind"]) {
+        case "node-committee":
+          {
+            // when a node is selected to be part of the committee for a certain round
+            this.nodes[content["node-id"]].addCommitteeMembership(content["round"]);
+          }
+          break;
+        case "node-proposer":
+          {
+            // when a node is selected to propose a block for a certain round
+            this.nodes[content["node-id"]].addProposerRound(content["round"]);
+          }
+          break;
         case "add-node":
           {
             this.nodes[content["node-id"]] = new Node(
