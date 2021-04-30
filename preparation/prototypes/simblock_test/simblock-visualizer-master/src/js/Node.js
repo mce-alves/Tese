@@ -26,15 +26,16 @@ export default class Node {
   }
 
   draw(ctx, timestamp) {
+    const block = this.getBlock(timestamp);
+    const blockId = (block === null ? -1 : block.id);
     const pos = this.worldMap.latLngToPixel(this.latitude, this.longitude);
-    const fillColor = this.getFillColor(timestamp);
-    const strokeColor = this.getStrokeColor(timestamp);
+    const c = u.colorForId(blockId, this.blockList[this.blockList.length - 1].id);
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, this.getRadius(timestamp), 0, Math.PI * 2, false);
-    ctx.fillStyle = `rgba(${fillColor.r}, ${fillColor.g}, ${fillColor.b}, ${fillColor.a})`;
+    ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${0.5})`;
     ctx.fill();
     ctx.lineWidth = 0.5;
-    ctx.strokeStyle = `rgba(${strokeColor.r}, ${strokeColor.g}, ${strokeColor.b}, ${strokeColor.a})`;
+    ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${1})`;
     ctx.stroke();
     ctx.closePath();
   }

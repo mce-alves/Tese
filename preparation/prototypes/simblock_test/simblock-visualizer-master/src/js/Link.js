@@ -1,14 +1,47 @@
+import u from "@/js/utils";
+
 export default class Link {
   constructor(worldMap, timestamp, beginNode, endNode) {
     this.worldMap = worldMap;
     this.timestamp = timestamp;
     this.beginNode = beginNode;
     this.endNode = endNode;
+    this.messages = []; // content format = {start, end, blockId}
   }
 
   draw(ctx, timestamp) {
-    // this._drawLink(ctx);
-    this._drawFlow(ctx, timestamp);
+    this._drawMessageExchange(ctx, timestamp);
+    //this._drawLink(ctx);
+    //this._drawFlow(ctx, timestamp);
+  }
+
+  _drawMessageExchange(ctx, timestamp) {
+    for(let m of this.messages) {
+      if(timestamp >= m.start && timestamp <= m.end) {
+        // if there is a message being exchanged within this period, draw the link
+        const beginPos = this.worldMap.latLngToPixel(
+          this.beginNode.latitude,
+          this.beginNode.longitude
+        );
+        const endPos = this.worldMap.latLngToPixel(
+          this.endNode.latitude,
+          this.endNode.longitude
+        );
+        ctx.beginPath();
+        ctx.moveTo(beginPos.x, beginPos.y);
+        ctx.lineTo(endPos.x, endPos.y);
+        ctx.lineWidth = 0.25;
+        const blockId = m.blockId;
+        const c = u.colorForId(blockId, this.endNode.blockList[this.endNode.blockList.length - 1].id);
+        ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${0.8})`;
+        ctx.stroke();
+        ctx.closePath();
+        break;
+      }
+      else if(timestamp < m.start) {
+        return;
+      }
+    }
   }
 
   _drawLink(ctx) {

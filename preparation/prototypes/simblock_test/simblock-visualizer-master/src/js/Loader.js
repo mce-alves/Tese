@@ -115,6 +115,22 @@ export default class Loader {
             );
           }
           break;
+        case "flow-message":
+          {
+            let startTime = content["transmission-timestamp"];
+            let endTime = content["reception-timestamp"];
+            let nFrom = content["begin-node-id"];
+            let nTo = content["end-node-id"];
+            let bId = content["block-id"];
+            for(let l of this.links) {
+              if(l.beginNode.id == nFrom && l.endNode.id == nTo) {
+                // message was sent through this link
+                l.messages.push({start:startTime, end:endTime, blockId:bId});
+                break;
+              }
+            }
+          }
+          break;
         case "flow-block":
           {
             const block = blocks[parseInt(content["block-id"])];
