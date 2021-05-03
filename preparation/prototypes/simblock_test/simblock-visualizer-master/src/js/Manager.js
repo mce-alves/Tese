@@ -29,11 +29,16 @@ export default class Manager {
     this.worldMap.onChange(draw);
 
     this.selectedNode = null;
+    this.selectedLink = null;
 
     this.ctx.canvas.addEventListener("mousedown", () => {
       if (this.selectedNode !== null) {
         this.selectedNode.unselect();
         this.selectedNode = null;
+      }
+      if(this.selectedLink !== null) {
+        this.selectedLink.unselect();
+        this.selectedLink = null;
       }
     });
     window.addEventListener("mouseup", event => {
@@ -45,7 +50,13 @@ export default class Manager {
       if (node !== null) {
         node.select();
         this.selectedNode = node;
-        console.log(node); // DEBUG
+        node.log(this.getTimestamp());
+      }
+      const link = this._getCollidedLink(x, y);
+      if(link !== null) {
+        link.select();
+        this.selectedLink = link;
+        link.log(this.getTimestamp());
       }
     });
   }
@@ -134,6 +145,17 @@ export default class Manager {
       if (typeof node === "undefined") continue;
       if (node.collide(mouseX, mouseY, timestamp)) {
         return node;
+      }
+    }
+    return null;
+  }
+
+  _getCollidedLink(mouseX, mouseY) {
+    const timestamp = this.getTimestamp();
+    for (const link of this.links) {
+      if (typeof link === "undefined") continue;
+      if (link.collide(mouseX, mouseY, timestamp)) {
+        return link;
       }
     }
     return null;

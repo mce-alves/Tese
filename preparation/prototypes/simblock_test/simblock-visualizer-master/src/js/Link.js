@@ -6,6 +6,7 @@ export default class Link {
     this.timestamp = timestamp;
     this.beginNode = beginNode;
     this.endNode = endNode;
+    this.selected = false;
     this.messages = []; // content format = {start, end, blockId}
   }
 
@@ -30,7 +31,7 @@ export default class Link {
         ctx.beginPath();
         ctx.moveTo(beginPos.x, beginPos.y);
         ctx.lineTo(endPos.x, endPos.y);
-        ctx.lineWidth = 0.25;
+        ctx.lineWidth = this.selected ? 1 : 0.25;
         const blockId = m.blockId;
         const c = u.colorForId(blockId);
         ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${0.8})`;
@@ -100,4 +101,62 @@ export default class Link {
     ctx.stroke();
     ctx.closePath();
   }
+
+  select() {
+    this.selected = true;
+  }
+
+  unselect() {
+    this.selected = false;
+  }
+
+  collide(mouseX, mouseY, timestamp) {
+    const threshold = 3;
+    const A = this.worldMap.latLngToPixel(this.beginNode.latitude, this.beginNode.longitude);
+    const B = this.worldMap.latLngToPixel(this.endNode.latitude, this.endNode.longitude);
+    const P = {x:mouseX, y:mouseY};
+    if(this.distToSegment(P, A, B) < threshold) {
+      // Only return true if the line is visible (this is checked last because it is more resource intensive)
+      for(let m of this.messages) {
+        if(timestamp >= m.start && timestamp <= m.end) {
+          return true;
+        }
+      }
+    }
+  }
+
+  log(timestamp) {
+    let currentMessages = [];
+    for(let m of this.messages) {
+      if(timestamp >= m.start && timestamp <= m.end) {
+        currentMessages.push(m);
+      }
+      if(timestamp > m.end){
+        break;
+      }
+    }
+    console.log({
+      type: "LINK",
+      from: this.beginNode,
+      to: this.endNode,
+      content: currentMessages
+    });
+  }
+
+
+
+
+
+  // below code is from https://stackoverflow.com/a/1501725
+  sqr(x) { return x*x; }
+  dist2(v, w) { return this.sqr(v.x - w.x) + this.sqr(v.y - w.y); }
+  distToSegmentSquared(p, v, w) {
+    let l2 = this.dist2(v, w);
+    if (l2 == 0) { return this.dist2(p,v); }
+    let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return this.dist2(p, {x:v.x+t*(w.x-v.x), y:v.y+t*(w.y-v.y)});
+  }
+  distToSegment(p, v, w) { return Math.sqrt(this.distToSegmentSquared(p, v, w)); }
+  /////////
 }

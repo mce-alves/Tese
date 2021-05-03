@@ -94,6 +94,46 @@ export default class Node {
     );
   }
 
+  log(timestamp) {
+    console.log({
+      id: this.id,
+      region: this.region,
+      chainHead: this.getBlock(timestamp),
+      inCommittee: this.committeeMember(timestamp),
+      proposer: this.isProposer(timestamp)
+    });
+  }
+
+  committeeMember(timestamp) {
+    const b = this.getBlock(timestamp);
+    if(b == null) {
+      return this.inCommittee.includes(1);
+    }
+    let round = 0;
+    for(let block of this.blockList) {
+      round++;
+      if(block.id == b.id) {
+        return this.inCommittee.includes(round);
+      }
+    }
+    return false;
+  }
+
+  isProposer(timestamp) {
+    const b = this.getBlock(timestamp);
+    if(b == null) {
+      return this.proposing.includes(1);
+    }
+    let round = 0;
+    for(let block of this.blockList) {
+      round++;
+      if(block.id == b.id) {
+        return this.proposing.includes(round);
+      }
+    }
+    return false;
+  }
+
   getFillColor(timestamp) {
     const block = this.getBlock(timestamp);
     const blockId = (block === null ? -1 : block.id) + 1;
