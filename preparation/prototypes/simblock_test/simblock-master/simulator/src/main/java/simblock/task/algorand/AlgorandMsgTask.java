@@ -79,7 +79,7 @@ public class AlgorandMsgTask extends BlockMessageTask {
         OUT_JSON_FILE.print("\"reception-timestamp\":" + getCurrentTime() + ",");
         OUT_JSON_FILE.print("\"begin-node-id\":" + getFrom().getNodeID() + ",");
         OUT_JSON_FILE.print("\"end-node-id\":" + getTo().getNodeID() + ",");
-        OUT_JSON_FILE.print("\"msg-type\":" + sType + ",");
+        OUT_JSON_FILE.print("\"msg-type\":\"" + sType + "\",");
         OUT_JSON_FILE.print("\"block-id\":" + (this.block == null ? -1 : block.getId()));
         OUT_JSON_FILE.print("}");
         OUT_JSON_FILE.print("},");
