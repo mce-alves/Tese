@@ -39,7 +39,7 @@ export default class Node {
     ctx.lineWidth = 0.5;
     ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${1})`;
     ctx.stroke();
-    if(this.proposing.includes(blockId+2)) {
+    if(this.proposing.includes(blockId+2)) { // +1 because ids start at 0 and rounds at 1; +1 again for the next round
       ctx.beginPath();
       ctx.fillStyle = "black";
       ctx.fillText("P", pos.x - (this.getRadius(timestamp)/4), pos.y + (this.getRadius(timestamp)/4));
@@ -48,7 +48,7 @@ export default class Node {
       ctx.fill();
       ctx.stroke();
     }
-    else if(this.inCommittee.includes(blockId+2)) {
+    else if(this.inCommittee.includes(blockId+2)) { // +1 because ids start at 0 and rounds at 1; +1 again for the next round
       ctx.beginPath();
       ctx.fillStyle = "black";
       ctx.fillText("C", pos.x - (this.getRadius(timestamp)/4), pos.y + (this.getRadius(timestamp)/4));
@@ -113,7 +113,7 @@ export default class Node {
     for(let block of this.blockList) {
       round++;
       if(block.id == b.id) {
-        return this.inCommittee.includes(round);
+        return this.inCommittee.includes(round+1);
       }
     }
     return false;
@@ -128,7 +128,7 @@ export default class Node {
     for(let block of this.blockList) {
       round++;
       if(block.id == b.id) {
-        return this.proposing.includes(round);
+        return this.proposing.includes(round+1);
       }
     }
     return false;
