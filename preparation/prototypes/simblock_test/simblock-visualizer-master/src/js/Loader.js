@@ -134,10 +134,11 @@ export default class Loader {
             let nFrom = content["begin-node-id"];
             let nTo = content["end-node-id"];
             let bId = content["block-id"];
+            let mType = content["msg-type"];
             for(let l of this.links) {
               if(l.beginNode.id == nFrom && l.endNode.id == nTo) {
                 // message was sent through this link
-                l.messages.push({start:startTime, end:endTime, blockId:bId});
+                l.messages.push({start:startTime, end:endTime, blockId:bId, type:mType});
                 break;
               }
             }

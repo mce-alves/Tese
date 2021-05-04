@@ -54,6 +54,24 @@ public class AlgorandMsgTask extends BlockMessageTask {
      */
     @Override
     public void run() {
+        String sType = "";
+        switch(getType()) {
+            case PROPOSAL:
+                sType = "PROPOSAL";
+                break;
+            case SOFTVOTE:
+                sType = "SOFTVOTE";
+                break;
+            case CERTVOTE:
+                sType = "CERTVOTE";
+                break;
+            case NEXTVOTE:
+                sType = "NEXTVOTE";
+                break;
+            default:
+                break;
+
+        }
         OUT_JSON_FILE.print("{");
         OUT_JSON_FILE.print("\"kind\":\"flow-message\",");
         OUT_JSON_FILE.print("\"content\":{");
@@ -61,6 +79,7 @@ public class AlgorandMsgTask extends BlockMessageTask {
         OUT_JSON_FILE.print("\"reception-timestamp\":" + getCurrentTime() + ",");
         OUT_JSON_FILE.print("\"begin-node-id\":" + getFrom().getNodeID() + ",");
         OUT_JSON_FILE.print("\"end-node-id\":" + getTo().getNodeID() + ",");
+        OUT_JSON_FILE.print("\"msg-type\":" + sType + ",");
         OUT_JSON_FILE.print("\"block-id\":" + (this.block == null ? -1 : block.getId()));
         OUT_JSON_FILE.print("}");
         OUT_JSON_FILE.print("},");
