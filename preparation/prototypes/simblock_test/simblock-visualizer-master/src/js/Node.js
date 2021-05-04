@@ -39,7 +39,7 @@ export default class Node {
     ctx.lineWidth = 0.5;
     ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${1})`;
     ctx.stroke();
-    if(this.proposing.includes(blockId+1)) {
+    if(this.proposing.includes(blockId+2)) {
       ctx.beginPath();
       ctx.fillStyle = "black";
       ctx.fillText("P", pos.x - (this.getRadius(timestamp)/4), pos.y + (this.getRadius(timestamp)/4));
@@ -48,7 +48,7 @@ export default class Node {
       ctx.fill();
       ctx.stroke();
     }
-    else if(this.inCommittee.includes(blockId+1)) {
+    else if(this.inCommittee.includes(blockId+2)) {
       ctx.beginPath();
       ctx.fillStyle = "black";
       ctx.fillText("C", pos.x - (this.getRadius(timestamp)/4), pos.y + (this.getRadius(timestamp)/4));
@@ -61,13 +61,13 @@ export default class Node {
   }
 
   addCommitteeMembership(round) {
-    if(!this.inCommittee(round)) {
+    if(!this.inCommittee.includes(round)) {
       this.inCommittee.push(round);
     }
   }
 
   addProposerRound(round) {
-    if(!this.proposing(round)) {
+    if(!this.proposing.includes(round)) {
       this.proposing.push(round);
     }
   }

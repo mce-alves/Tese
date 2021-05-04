@@ -135,7 +135,7 @@ export default class Link {
         latencySum = latencySum + (m.end - m.start);
         currentMessages.push({type:m.type, blockId:m.blockId});
       }
-      if(timestamp > m.end){
+      if(timestamp < m.start){
         break;
       }
     }
