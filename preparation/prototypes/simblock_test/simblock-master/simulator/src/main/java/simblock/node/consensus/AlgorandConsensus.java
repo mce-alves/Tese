@@ -161,18 +161,16 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Step 2 of the Agreement Protocol
     public void filteringStep() throws NoSuchAlgorithmException {
         if(step == 2) {
-            Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
-            if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
-                // if period >= 2 and there was a non-empty block with more than REQUIRED_VOTES
-                if(inCommitee(getSelfNode().getNodeID())) {
+            if(inCommitee(getSelfNode().getNodeID())) {
+                Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
+                if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
+                    // if period >= 2 and there was a non-empty block with more than REQUIRED_VOTES
                     log("Soft Voting for the block with majority Next Votes from previous period. Block id="+mostNextVotedBlock.second.getId());
                     broadcastProtocolMessage(AlgorandMsgType.SOFTVOTE, round, period, step, mostNextVotedBlock.second);
                 }
-            }
-            else {
-                // identify the leader for this period
-                // the leader is the node whose credential's hash is smallest, in case of multiple proposers
-                if(inCommitee(getSelfNode().getNodeID())) {
+                else {
+                    // identify the leader for this period
+                    // the leader is the node whose credential's hash is smallest, in case of multiple proposers
                     Block leaderProposal = findLeaderProposal();
                     if(leaderProposal != null) {
                         log("Soft Voting for the block proposed by the identified leader. Block id="+leaderProposal.getId()+". Leader id="+leaderProposal.getMinter().getNodeID());
@@ -192,17 +190,15 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Step 3 of the Agreement Protocol
     public void certifyingStep() {
         if(step == 3) {
-            Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
-            if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
-                // if there was a block with more than REQUIRED_VOTES softvotes in the current period, certvote for it
-                if(inCommitee(getSelfNode().getNodeID())) {
+            if(inCommitee(getSelfNode().getNodeID())) {
+                Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
+                if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
+                    // if there was a block with more than REQUIRED_VOTES softvotes in the current period, certvote for it
                     certVoted = new Pair<>(true, mostSoftVotedBlock.second);
                     log("Cert Voting for the block that received majority Soft Votes. Block id="+certVoted.second.getId());
                     broadcastProtocolMessage(AlgorandMsgType.CERTVOTE, round, period, step, certVoted.second);
                 }
-            }
-            else {
-                if(inCommitee(getSelfNode().getNodeID())) {
+                else {
                     log("Did not see any block with majority of Soft Votes, so not Cert Voting for any block.");
                 }
             }
@@ -214,24 +210,20 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Step 4 of the Agreement Protocol
     public void finishingStepOne() {
         if(step == 4) {
-            Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(nextvotes));
-            if(certVoted.first) {
-                // if the node has certvoted for a block in this period, nextvote for that same block
-                if(inCommitee(getSelfNode().getNodeID())) {
+            if(inCommitee(getSelfNode().getNodeID())) {
+                Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(nextvotes));
+                if(certVoted.first) {
+                    // if the node has certvoted for a block in this period, nextvote for that same block
                     log("Next Voting for the block that I Cert Voted. Block id="+certVoted.second.getId());
                     broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, certVoted.second);
                 }
-            }
-            else if(period >=2 && mostNextVotedBlock.first && mostNextVotedBlock.second == null) {
-                // if the node has seen a majority of nextvotes for the empty block, nextvote the empty block
-                if(inCommitee(getSelfNode().getNodeID())) {
+                else if(period >=2 && mostNextVotedBlock.first && mostNextVotedBlock.second == null) {
+                    // if the node has seen a majority of nextvotes for the empty block, nextvote the empty block
                     log("Next Voting for the empty block, since I have seen a majority of Next Votes for it.");
                     broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, null);
                 }
-            }
-            else {
-                // otherwise, the node sends a nextvote with its starting value
-                if(inCommitee(getSelfNode().getNodeID())) {
+                else {
+                    // otherwise, the node sends a nextvote with its starting value
                     log("Next Voting my starting value.");
                     broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, startingValue);
                 }
@@ -244,18 +236,16 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Step 5 of the Agreement Protocol
     public void finishingStepTwo() {
         if(step == 5) {
-            Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
-            Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
-            if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
-                // if the most voted block that received REQUIRED_VOTES is not empty, nextvote it
-                if(inCommitee(getSelfNode().getNodeID())) {
+            if(inCommitee(getSelfNode().getNodeID())) {
+                Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
+                Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
+                if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
+                    // if the most voted block that received REQUIRED_VOTES is not empty, nextvote it
                     log("Next Voting for the non-empty block that received the most Soft Votes. Block id="+mostSoftVotedBlock.second.getId());
                     broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, mostSoftVotedBlock.second);
                 }
-            }
-            else if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second == null && !certVoted.first) {
-                // if the node hasn't certvoted and sees a majority of softvotes for empty block, nextvote empty block
-                if(inCommitee(getSelfNode().getNodeID())) {
+                else if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second == null && !certVoted.first) {
+                    // if the node hasn't certvoted and sees a majority of softvotes for empty block, nextvote empty block
                     log("Next Voting for the empty block since I have not Cert Voted a block and didn't see a non-empty block with majority of Soft Votes.");
                     broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, null);
                 }
