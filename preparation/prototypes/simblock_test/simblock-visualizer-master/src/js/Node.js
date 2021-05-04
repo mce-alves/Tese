@@ -97,10 +97,15 @@ export default class Node {
   log(timestamp) {
     console.log({
       id: this.id,
-      region: this.region,
+      region: this.region.name,
       chainHead: this.getBlock(timestamp),
       inCommittee: this.committeeMember(timestamp),
-      proposer: this.isProposer(timestamp)
+      proposer: this.isProposer(timestamp),
+      globalStatistics:{
+        committeeParticipations: this.inCommittee.length,
+        proposalsCreated: this.proposing.length,
+        totalNumberOfBlocks: this.blockList.length
+      }
     });
   }
 
