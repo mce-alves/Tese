@@ -7,6 +7,7 @@ import simblock.block.Block;
 import simblock.block.SamplePoSBlock;
 import simblock.node.Node;
 import simblock.simulator.Main;
+import simblock.simulator.statistics.AlgorandStatistics;
 import simblock.task.SampleStakingTask;
 import simblock.task.algorand.AlgorandIncStepTask;
 import simblock.task.algorand.AlgorandMsgTask;
@@ -277,6 +278,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
             // if there is a block with more than REQUIRED_VOTES certvotes, then consensus was reached
             // and that block can be added to the chain
             getSelfNode().addToChain(mostCertVotedBlock.second);
+            AlgorandStatistics.getInstance().consensusReached(getSelfNode().getNodeID(), getCurrentTime(), round);
             advanceRound();
             return true;
         }

@@ -156,6 +156,9 @@ export default class Loader {
             );
           }
           break;
+        case "statistics":
+          console.log(content);
+          break;
         case "simulation-end":
           {
             //

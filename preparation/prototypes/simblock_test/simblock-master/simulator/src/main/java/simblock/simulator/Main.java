@@ -21,6 +21,7 @@ import simblock.auxiliary.MyLogger;
 import simblock.block.Block;
 import simblock.node.*;
 import simblock.node.consensus.AlgorandConsensus;
+import simblock.simulator.statistics.AlgorandStatistics;
 import simblock.task.AbstractMintingTask;
 import simblock.task.algorand.AlgorandIncStepTask;
 
@@ -136,14 +137,16 @@ public class Main {
       */
       if(getSimulatedNodes().get(0).getBlock() != null) {
         if(getSimulatedNodes().get(0).getBlock().getHeight() > END_BLOCK_HEIGHT) {
-          // Stop the simulation if the heigh exceeds END_BLOCK_HEIGHT
+          // Stop the simulation if the height exceeds END_BLOCK_HEIGHT
           break;
         }
       }
+      AlgorandStatistics.getInstance().gatherStatistics(getTask());
       // Execute task
       runTask();
     }
 
+    AlgorandStatistics.getInstance().printStatistics();
     // Print propagation information about all blocks
     printAllPropagation();
 
