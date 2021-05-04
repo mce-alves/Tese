@@ -37,9 +37,9 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // The constant used in computing the deadlines for each step in the protocol (milliseconds)
     public static final long LAMBDA = 1000;
     // Committee size for each step
-    public static final long T = 20;
+    public static final int T = 20;
     // Voting threshold (usually 2/3 majority)
-    public static final long REQUIRED_VOTES = 15;
+    public static final int REQUIRED_VOTES = 15;
 
     /**
      * round: node's current round
@@ -134,8 +134,10 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
                 Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
                 if(mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
                     // if there was a non-empty block with more than REQUIRED_VOTES in the previous period, propose it
-                    log("Proposing non-empty with majority votes from previous period. Block id="+mostNextVotedBlock.second.getId());
-                    broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, mostNextVotedBlock.second);
+                    if(inCommitee(getSelfNode().getNodeID())) {
+                        log("Proposing non-empty with majority votes from previous period. Block id="+mostNextVotedBlock.second.getId());
+                        broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, mostNextVotedBlock.second);
+                    }
                 }
                 else {
                     // otherwise, re-check if selected by sortition, and try to create a block to propose
@@ -162,21 +164,25 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
             Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
             if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
                 // if period >= 2 and there was a non-empty block with more than REQUIRED_VOTES
-                log("Soft Voting for the block with majority Next Votes from previous period. Block id="+mostNextVotedBlock.second.getId());
-                broadcastProtocolMessage(AlgorandMsgType.SOFTVOTE, round, period, step, mostNextVotedBlock.second);
+                if(inCommitee(getSelfNode().getNodeID())) {
+                    log("Soft Voting for the block with majority Next Votes from previous period. Block id="+mostNextVotedBlock.second.getId());
+                    broadcastProtocolMessage(AlgorandMsgType.SOFTVOTE, round, period, step, mostNextVotedBlock.second);
+                }
             }
             else {
                 // identify the leader for this period
                 // the leader is the node whose credential's hash is smallest, in case of multiple proposers
-                Block leaderProposal = findLeaderProposal();
-                if(leaderProposal != null) {
-                    log("Soft Voting for the block proposed by the identified leader. Block id="+leaderProposal.getId()+". Leader id="+leaderProposal.getMinter().getNodeID());
+                if(inCommitee(getSelfNode().getNodeID())) {
+                    Block leaderProposal = findLeaderProposal();
+                    if(leaderProposal != null) {
+                        log("Soft Voting for the block proposed by the identified leader. Block id="+leaderProposal.getId()+". Leader id="+leaderProposal.getMinter().getNodeID());
+                    }
+                    else {
+                        // this node has not seen any proposals
+                        log("Soft Voting for the empty block, since no leader proposals were found.");
+                    }
+                    broadcastProtocolMessage(AlgorandMsgType.SOFTVOTE, round, period, step, leaderProposal);
                 }
-                else {
-                    // this node has not seen any proposals
-                    log("Soft Voting for the empty block, since no leader proposals were found.");
-                }
-                broadcastProtocolMessage(AlgorandMsgType.SOFTVOTE, round, period, step, leaderProposal);
             }
             putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 3));
             step++;
@@ -189,12 +195,16 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
             Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
             if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
                 // if there was a block with more than REQUIRED_VOTES softvotes in the current period, certvote for it
-                certVoted = new Pair<>(true, mostSoftVotedBlock.second);
-                log("Cert Voting for the block that received majority Soft Votes. Block id="+certVoted.second.getId());
-                broadcastProtocolMessage(AlgorandMsgType.CERTVOTE, round, period, step, certVoted.second);
+                if(inCommitee(getSelfNode().getNodeID())) {
+                    certVoted = new Pair<>(true, mostSoftVotedBlock.second);
+                    log("Cert Voting for the block that received majority Soft Votes. Block id="+certVoted.second.getId());
+                    broadcastProtocolMessage(AlgorandMsgType.CERTVOTE, round, period, step, certVoted.second);
+                }
             }
             else {
-                log("Did not see any block with majority of Soft Votes, so not Cert Voting for any block.");
+                if(inCommitee(getSelfNode().getNodeID())) {
+                    log("Did not see any block with majority of Soft Votes, so not Cert Voting for any block.");
+                }
             }
             putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 4));
             step++;
@@ -207,18 +217,24 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
             Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(nextvotes));
             if(certVoted.first) {
                 // if the node has certvoted for a block in this period, nextvote for that same block
-                log("Next Voting for the block that I Cert Voted. Block id="+certVoted.second.getId());
-                broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, certVoted.second);
+                if(inCommitee(getSelfNode().getNodeID())) {
+                    log("Next Voting for the block that I Cert Voted. Block id="+certVoted.second.getId());
+                    broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, certVoted.second);
+                }
             }
             else if(period >=2 && mostNextVotedBlock.first && mostNextVotedBlock.second == null) {
                 // if the node has seen a majority of nextvotes for the empty block, nextvote the empty block
-                log("Next Voting for the empty block, since I have seen a majority of Next Votes for it.");
-                broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, null);
+                if(inCommitee(getSelfNode().getNodeID())) {
+                    log("Next Voting for the empty block, since I have seen a majority of Next Votes for it.");
+                    broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, null);
+                }
             }
             else {
                 // otherwise, the node sends a nextvote with its starting value
-                log("Next Voting my starting value.");
-                broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, startingValue);
+                if(inCommitee(getSelfNode().getNodeID())) {
+                    log("Next Voting my starting value.");
+                    broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, startingValue);
+                }
             }
             putTask(new AlgorandIncStepTask(getSelfNode(), 2*LAMBDA, 5));
             step++;
@@ -232,13 +248,17 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
             Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
             if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
                 // if the most voted block that received REQUIRED_VOTES is not empty, nextvote it
-                log("Next Voting for the non-empty block that received the most Soft Votes. Block id="+mostSoftVotedBlock.second.getId());
-                broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, mostSoftVotedBlock.second);
+                if(inCommitee(getSelfNode().getNodeID())) {
+                    log("Next Voting for the non-empty block that received the most Soft Votes. Block id="+mostSoftVotedBlock.second.getId());
+                    broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, mostSoftVotedBlock.second);
+                }
             }
             else if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second == null && !certVoted.first) {
                 // if the node hasn't certvoted and sees a majority of softvotes for empty block, nextvote empty block
-                log("Next Voting for the empty block since I have not Cert Voted a block and didn't see a non-empty block with majority of Soft Votes.");
-                broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, null);
+                if(inCommitee(getSelfNode().getNodeID())) {
+                    log("Next Voting for the empty block since I have not Cert Voted a block and didn't see a non-empty block with majority of Soft Votes.");
+                    broadcastProtocolMessage(AlgorandMsgType.NEXTVOTE, round, period, step, null);
+                }
             }
             // check if node can finish the round
             if(haltingCondition()) {
@@ -500,7 +520,35 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     private boolean selectedBySortition(int nodeId) {
         // Since all nodes will use the round as a seed, only one node will be selected per round
         Random r = new Random(round);
-        return (r.nextInt(NUM_OF_NODES) + 1) == nodeId;
+        boolean res = (r.nextInt(NUM_OF_NODES) + 1) == nodeId;
+        if(res) {
+            printSelectedToPropose(nodeId, round);
+        }
+        return res;
+    }
+
+    // Check if node is in the current round's committee
+    private boolean inCommitee(int nodeId) {
+        // Since all nodes will use the round as a seed, they will see the same nodes being selected
+        Random r = new Random(round);
+        ArrayList<Integer> selected = new ArrayList(T);
+
+        while(selected.size() < T) {
+            int rNum = (r.nextInt(NUM_OF_NODES) + 1);
+            if(selected.contains(rNum)) {
+                continue;
+            }
+            if(rNum == nodeId) {
+                printInCommittee(nodeId, round);
+                selected.add(rNum);
+                return true;
+            }
+            else {
+                selected.add(rNum);
+            }
+        }
+
+        return false;
     }
 
     // Increment period updating corresponding state
@@ -572,6 +620,36 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         OUT_JSON_FILE.print("\"timestamp\":" + getCurrentTime() + ",");
         OUT_JSON_FILE.print("\"node-id\":" + getSelfNode().getNodeID() + ",");
         OUT_JSON_FILE.print("\"block-id\":" + block.getId());
+        OUT_JSON_FILE.print("}");
+        OUT_JSON_FILE.print("},");
+        OUT_JSON_FILE.flush();
+    }
+
+    /**
+     * Log that node with ID = id is selected to propose in round=r
+     */
+    private void printSelectedToPropose(int id, int r) {
+        OUT_JSON_FILE.print("{");
+        OUT_JSON_FILE.print("\"kind\":\"node-proposer\",");
+        OUT_JSON_FILE.print("\"content\":{");
+        OUT_JSON_FILE.print("\"timestamp\":" + getCurrentTime() + ",");
+        OUT_JSON_FILE.print("\"node-id\":" + id + ",");
+        OUT_JSON_FILE.print("\"round\":" + r);
+        OUT_JSON_FILE.print("}");
+        OUT_JSON_FILE.print("},");
+        OUT_JSON_FILE.flush();
+    }
+
+    /**
+     * Log that node with ID = id is part of committee in round=r
+     */
+    private void printInCommittee(int id, int r) {
+        OUT_JSON_FILE.print("{");
+        OUT_JSON_FILE.print("\"kind\":\"node-committee\",");
+        OUT_JSON_FILE.print("\"content\":{");
+        OUT_JSON_FILE.print("\"timestamp\":" + getCurrentTime() + ",");
+        OUT_JSON_FILE.print("\"node-id\":" + id + ",");
+        OUT_JSON_FILE.print("\"round\":" + r);
         OUT_JSON_FILE.print("}");
         OUT_JSON_FILE.print("},");
         OUT_JSON_FILE.flush();
