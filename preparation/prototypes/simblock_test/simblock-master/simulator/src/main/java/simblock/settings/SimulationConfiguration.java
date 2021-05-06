@@ -20,11 +20,15 @@ package simblock.settings;
  * The type Simulation configuration allows for specific simulation instance configuration.
  */
 public class SimulationConfiguration {
+
+  // POW or POS
+  public static final String PROTOCOL_FAMILY = "POS";
+
   /**
    * The number of nodes participating in the blockchain network.
    */
   //TODO(miguel) revert
-  public static final int NUM_OF_NODES = 20;//300;//600;//800;//6000;
+  public static final int NUM_OF_NODES = 50;//300;//600;//800;//6000;
 
   /**
    * The kind of routing table.
