@@ -115,6 +115,7 @@ public class Main {
     // Setup network
     constructNetworkWithAllNodes(NUM_OF_NODES);
 
+    printProtocol("POS");
     AlgorandConsensus.printParameters();
 
     // Initial block height, we stop at END_BLOCK_HEIGHT
@@ -399,6 +400,17 @@ public class Main {
     } catch (IOException ex) {
       ex.printStackTrace();
     }
+  }
+
+  // Used to inform the visualizer what type of protocol it is displaying
+  private static void printProtocol(String protocol) {
+    OUT_JSON_FILE.print("{");
+    OUT_JSON_FILE.print("\"kind\":\"protocol\",");
+    OUT_JSON_FILE.print("\"content\":{");
+    OUT_JSON_FILE.print("\"protocol\":\"" + protocol+"\"");
+    OUT_JSON_FILE.print("}");
+    OUT_JSON_FILE.print("},");
+    OUT_JSON_FILE.flush();
   }
 
 }

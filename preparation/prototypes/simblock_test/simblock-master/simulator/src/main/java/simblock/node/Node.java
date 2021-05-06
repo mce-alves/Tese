@@ -307,6 +307,7 @@ public class Node {
     OUT_JSON_FILE.print("\"content\":{");
     OUT_JSON_FILE.print("\"timestamp\":" + getCurrentTime() + ",");
     OUT_JSON_FILE.print("\"node-id\":" + this.getNodeID() + ",");
+    OUT_JSON_FILE.print("\"owner-id\":" + newBlock.getMinter().getNodeID() + ",");
     OUT_JSON_FILE.print("\"block-id\":" + newBlock.getId());
     OUT_JSON_FILE.print("}");
     OUT_JSON_FILE.print("},");

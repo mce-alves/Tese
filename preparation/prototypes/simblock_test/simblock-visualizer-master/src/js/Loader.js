@@ -116,7 +116,7 @@ export default class Loader {
               this.worldMap,
               content["timestamp"],
               content["block-id"],
-              this.nodes[content["node-id"]]
+              this.nodes[content["owner-id"]]
             );
             blocks[parseInt(content["block-id"])] = block;
             block.flow(
@@ -161,6 +161,11 @@ export default class Loader {
           break;
         case "parameters":
           console.log(content);
+          break;
+        case "protocol":
+          // the type of the protocol (PoS / PoW)
+          // needed because it slightly changes how node state is drawn on screen
+          window.PROTOCOL = content["protocol"];
           break;
         case "simulation-end":
           {

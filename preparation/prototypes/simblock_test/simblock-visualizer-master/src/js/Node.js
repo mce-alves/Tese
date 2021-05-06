@@ -39,24 +39,31 @@ export default class Node {
     ctx.lineWidth = 0.5;
     ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${1})`;
     ctx.stroke();
-    if(this.proposing.includes(blockId+2)) { // +1 because ids start at 0 and rounds at 1; +1 again for the next round
-      ctx.beginPath();
-      ctx.fillStyle = "black";
-      ctx.fillText("P", pos.x - (this.getRadius(timestamp)/4), pos.y + (this.getRadius(timestamp)/4));
-      ctx.strokeStyle = "black";
-      ctx.strokeText("P", pos.x - (this.getRadius(timestamp)/4), pos.y + (this.getRadius(timestamp)/4));
-      ctx.fill();
-      ctx.stroke();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.beginPath();
+    ctx.fillStyle = "black";
+    ctx.strokeStyle = "black";
+    let letter = "";
+    if(window.PROTOCOL == 'POW') {
+      if(block != null) {
+        if(block.ownerNode.id == this.id) {
+          letter = "M";
+        }
+      }
     }
-    else if(this.inCommittee.includes(blockId+2)) { // +1 because ids start at 0 and rounds at 1; +1 again for the next round
-      ctx.beginPath();
-      ctx.fillStyle = "black";
-      ctx.fillText("C", pos.x - (this.getRadius(timestamp)/4), pos.y + (this.getRadius(timestamp)/4));
-      ctx.strokeStyle = "black";
-      ctx.strokeText("C", pos.x - (this.getRadius(timestamp)/4), pos.y + (this.getRadius(timestamp)/4));
-      ctx.fill();
-      ctx.stroke();
+    else if(window.PROTOCOL == 'POS') {
+      if(this.proposing.includes(blockId+2)) { // +1 because ids start at 0 and rounds at 1; +1 again for the next round
+        letter = "P";
+      }
+      else if(this.inCommittee.includes(blockId+2)) { // +1 because ids start at 0 and rounds at 1; +1 again for the next round
+        letter = "C";
+      }
     }
+    ctx.fillText(letter, pos.x, pos.y);
+    ctx.strokeText(letter, pos.x, pos.y);
+    ctx.fill();
+    ctx.stroke();
     ctx.closePath();
   }
 
@@ -83,14 +90,7 @@ export default class Node {
   getRadius(timestamp) {
     const block = this.getBlock(timestamp);
     return (
-      4.5 * (this.selected ? 1.2 : 1.0) * 2.0
-    );
-  }
-
-  oldGetRadius(timestamp) {
-    const block = this.getBlock(timestamp);
-    return (
-      4.5 * (this.selected ? 1.2 : 1.0) * (this.isMiner(block) ? 3.0 : 1.0)
+      5 * (this.selected ? 1.5 : 1.2)
     );
   }
 
@@ -98,9 +98,11 @@ export default class Node {
     console.log({
       id: this.id,
       region: this.region.name,
-      chainHead: this.getBlock(timestamp),
-      inCommittee: this.committeeMember(timestamp),
-      proposer: this.isProposer(timestamp),
+      currentStatistics: {
+        chainHead: this.getBlock(timestamp),
+        inCommittee: this.committeeMember(timestamp),
+        proposer: this.isProposer(timestamp)
+      },
       globalStatistics:{
         committeeParticipations: this.inCommittee.length,
         proposalsCreated: this.proposing.length,
