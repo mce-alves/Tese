@@ -159,6 +159,9 @@ export default class Loader {
         case "statistics":
           console.log(content);
           break;
+        case "parameters":
+          console.log(content);
+          break;
         case "simulation-end":
           {
             //

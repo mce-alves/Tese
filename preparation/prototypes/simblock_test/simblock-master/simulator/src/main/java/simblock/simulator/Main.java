@@ -115,6 +115,8 @@ public class Main {
     // Setup network
     constructNetworkWithAllNodes(NUM_OF_NODES);
 
+    AlgorandConsensus.printParameters();
+
     // Initial block height, we stop at END_BLOCK_HEIGHT
     int currentBlockHeight = 1;
 

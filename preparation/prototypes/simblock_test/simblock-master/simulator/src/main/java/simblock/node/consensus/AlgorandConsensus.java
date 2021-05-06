@@ -6,6 +6,7 @@ import simblock.auxiliary.Pair;
 import simblock.block.Block;
 import simblock.block.SamplePoSBlock;
 import simblock.node.Node;
+import simblock.settings.SimulationConfiguration;
 import simblock.simulator.Main;
 import simblock.simulator.statistics.AlgorandStatistics;
 import simblock.task.SampleStakingTask;
@@ -41,6 +42,9 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     public static final int T = 20;
     // Voting threshold (usually 2/3 majority)
     public static final int REQUIRED_VOTES = 15;
+    // Change for a node to have a block "ready" when selected to propose
+    // (1-BLOCK_CREATION_CHANCE) is basically the chance for the proposer to not propose on a certain period
+    public static final double BLOCK_CREATION_CHANCE = 0.8;
 
     /**
      * round: node's current round
@@ -350,7 +354,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         else {
             // create a block that extends the current head of the chain
             // coin flip to abstract if it is able to create a block at this time
-            if(Main.random.nextBoolean()) {
+            if(Main.random.nextDouble() <= BLOCK_CREATION_CHANCE) {
                 SamplePoSBlock parent = (SamplePoSBlock) getSelfNode().getBlock();
                 startingValue = new SamplePoSBlock(parent, getSelfNode(), getCurrentTime(), parent.getNextDifficulty());
                 log("Proposing new block with id="+startingValue.getId());
@@ -642,6 +646,21 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         OUT_JSON_FILE.print("\"timestamp\":" + getCurrentTime() + ",");
         OUT_JSON_FILE.print("\"node-id\":" + id + ",");
         OUT_JSON_FILE.print("\"round\":" + r);
+        OUT_JSON_FILE.print("}");
+        OUT_JSON_FILE.print("},");
+        OUT_JSON_FILE.flush();
+    }
+
+
+    public static void printParameters() {
+        OUT_JSON_FILE.print("{");
+        OUT_JSON_FILE.print("\"kind\":\"parameters\",");
+        OUT_JSON_FILE.print("\"content\":{");
+        OUT_JSON_FILE.print("\"number-of-nodes\":" + NUM_OF_NODES + ",");
+        OUT_JSON_FILE.print("\"lambda\":" + LAMBDA + ",");
+        OUT_JSON_FILE.print("\"block-creation-chance\":" + BLOCK_CREATION_CHANCE + ",");
+        OUT_JSON_FILE.print("\"committee-size\":" + T + ",");
+        OUT_JSON_FILE.print("\"majority-size\":" + REQUIRED_VOTES);
         OUT_JSON_FILE.print("}");
         OUT_JSON_FILE.print("},");
         OUT_JSON_FILE.flush();
