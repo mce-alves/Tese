@@ -34,7 +34,6 @@ public class AlgorandNode extends Node {
 
     @Override
     public void minting() {
-        // TODO abstraction for cryptographic sortition
     }
 
     /**

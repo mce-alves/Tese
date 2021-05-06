@@ -21,6 +21,7 @@ import simblock.auxiliary.MyLogger;
 import simblock.block.Block;
 import simblock.node.*;
 import simblock.node.consensus.AlgorandConsensus;
+import simblock.settings.SimulationConfiguration;
 import simblock.simulator.statistics.AlgorandStatistics;
 import simblock.task.AbstractMintingTask;
 import simblock.task.algorand.AlgorandIncStepTask;
@@ -115,8 +116,10 @@ public class Main {
     // Setup network
     constructNetworkWithAllNodes(NUM_OF_NODES);
 
-    printProtocol("POS");
-    AlgorandConsensus.printParameters();
+    printProtocol(PROTOCOL_FAMILY);
+    if(PROTOCOL_FAMILY.equals("POS")) {
+      AlgorandConsensus.printParameters();
+    }
 
     // Initial block height, we stop at END_BLOCK_HEIGHT
     int currentBlockHeight = 1;
@@ -144,12 +147,16 @@ public class Main {
           break;
         }
       }
-      AlgorandStatistics.getInstance().gatherStatistics(getTask());
+      if(PROTOCOL_FAMILY.equals("POS")) {
+        AlgorandStatistics.getInstance().gatherStatistics(getTask());
+      }
       // Execute task
       runTask();
     }
 
-    AlgorandStatistics.getInstance().printStatistics();
+    if(PROTOCOL_FAMILY.equals("POS")) {
+      AlgorandStatistics.getInstance().printStatistics();
+    }
     // Print propagation information about all blocks
     printAllPropagation();
 
@@ -339,10 +346,17 @@ public class Main {
     for (int id = 1; id <= numNodes; id++) {
       // Each node gets assigned a region, its degree, mining power, routing table and
       // consensus algorithm
-      Node node = new AlgorandNode(
-          id, degreeList.get(id - 1) + 1, regionList.get(id - 1), genMiningPower(), TABLE,
-          ALGO, useCBRNodes.get(id - 1), churnNodes.get(id - 1)
-      );
+      Node node;
+      if(PROTOCOL_FAMILY.equals("POW")) {
+        node = new Node(id, degreeList.get(id - 1) + 1, regionList.get(id - 1), genMiningPower(), TABLE,
+                ALGO, useCBRNodes.get(id - 1), churnNodes.get(id - 1));
+      }
+      else {
+        node = new AlgorandNode(
+                id, degreeList.get(id - 1) + 1, regionList.get(id - 1), genMiningPower(), TABLE,
+                ALGO, useCBRNodes.get(id - 1), churnNodes.get(id - 1)
+        );
+      }
       // Add the node to the list of simulated nodes
       addNode(node);
 
@@ -363,12 +377,15 @@ public class Main {
       node.joinNetwork();
     }
 
-    // Designates a random node (nodes in list are randomized) to mint the genesis block
-    //getSimulatedNodes().get(0).genesisBlock();
-
-    for(Node node : getSimulatedNodes()) {
-      // Triggers the start of the protocol for all nodes
-      putTask(new AlgorandIncStepTask(node, 2*AlgorandConsensus.LAMBDA, 1));
+    if(PROTOCOL_FAMILY.equals("POS")) {
+      for(Node node : getSimulatedNodes()) {
+        // Triggers the start of the protocol for all nodes
+        putTask(new AlgorandIncStepTask(node, 2*AlgorandConsensus.LAMBDA, 1));
+      }
+    }
+    else {
+      // Designates a random node (nodes in list are randomized) to mint the genesis block
+      getSimulatedNodes().get(0).genesisBlock();
     }
   }
 
