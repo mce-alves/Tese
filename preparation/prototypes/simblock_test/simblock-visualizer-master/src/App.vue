@@ -7,8 +7,6 @@
 <script>
 import WorldMap from "./components/WorldMap.vue";
 
-let PROTOCOL = "";
-
 export default {
   name: "app",
   components: {

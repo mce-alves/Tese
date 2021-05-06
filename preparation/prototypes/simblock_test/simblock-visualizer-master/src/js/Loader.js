@@ -166,6 +166,9 @@ export default class Loader {
           // the type of the protocol (PoS / PoW)
           // needed because it slightly changes how node state is drawn on screen
           window.PROTOCOL = content["protocol"];
+          if(window.PROTOCOL == "POS") {
+            window.speed = 10;
+          }
           break;
         case "simulation-end":
           {
