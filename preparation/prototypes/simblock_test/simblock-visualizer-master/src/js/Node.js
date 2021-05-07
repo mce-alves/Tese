@@ -29,6 +29,7 @@ export default class Node {
 
   draw(ctx, timestamp) {
     const block = this.getBlock(timestamp);
+    const height = this.getBlockHeight(timestamp);
     const blockId = (block === null ? -1 : block.id);
     const pos = this.worldMap.latLngToPixel(this.latitude, this.longitude);
     const c = u.colorForId(blockId);
@@ -53,10 +54,10 @@ export default class Node {
       }
     }
     else if(window.PROTOCOL == 'POS') {
-      if(this.proposing.includes(blockId+2)) { // +1 because ids start at 0 and rounds at 1; +1 again for the next round
+      if(this.proposing.includes(height+1)) { // +1 for the next round
         letter = "P";
       }
-      else if(this.inCommittee.includes(blockId+2)) { // +1 because ids start at 0 and rounds at 1; +1 again for the next round
+      else if(this.inCommittee.includes(height+1)) { // +1 for the next round
         letter = "C";
       }
     }
@@ -168,6 +169,19 @@ export default class Node {
         block.receivingTimestamp > result.receivingTimestamp
       ) {
         result = block;
+      }
+    }
+    return result;
+  }
+
+  getBlockHeight(timestamp) {
+    let result = 0;
+    for (const block of this.blockList) {
+      if(block.receivingTimestamp > timestamp) {
+        continue;
+      }
+      else {
+        result++;
       }
     }
     return result;
