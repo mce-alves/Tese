@@ -37,8 +37,6 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         COMMITTEE
     }
 
-    // TODO(miguel) check what are appropriate values for the constants (pages 11 and 12)
-    //  https://people.csail.mit.edu/nickolai/papers/gilad-algorand-eprint.pdf
     // The constant used in computing the deadlines for each step in the protocol (milliseconds)
     public static final long LAMBDA = 1000;
     // Committee size for each step
@@ -301,6 +299,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
 
     // Store a received message in the correct list, if it can be processed at the moment (otherwise store in queue)
     // This function will be called in the Node's "receiveMessage" function
+    // TODO(miguel) "credential check" - the node that sent a proposal can in fact propose? etc.
     public void processMessage(AlgorandMsgTask msg) {
         if(msg.getRound() < round || msg.getPeriod() < period - 1) {
             // ignore late messages (shouldn't happen, but just to be safe)
@@ -320,7 +319,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
                 }
                 break;
             case NEXTVOTE:
-                isDuplicate = addNoDuplicate(msg, msg.getPeriod() == period-1 ? prevnextvotes : nextvotes);
+                isDuplicate = addNoDuplicate(msg, (msg.getPeriod() == period-1 ? prevnextvotes : nextvotes));
                 Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(nextvotes));
                 if(mostNextVotedBlock.first) {
                     // If the node sees more than REQUIRED_VOTES for a block B in the current period, it starts the next
@@ -332,7 +331,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
                 }
                 break;
             case SOFTVOTE:
-                isDuplicate = addNoDuplicate(msg, msg.getPeriod() == period-1 ? prevsoftvotes : softvotes);
+                isDuplicate = addNoDuplicate(msg, (msg.getPeriod() == period-1 ? prevsoftvotes : softvotes));
                 break;
             case PROPOSAL:
                 isDuplicate = addNoDuplicate(msg, proposals);
@@ -377,8 +376,19 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     private boolean addNoDuplicate(AlgorandMsgTask msg, ArrayList<AlgorandMsgTask> list) {
         for(AlgorandMsgTask in : list) {
             if(in.getVoteFrom().getNodeID() == msg.getVoteFrom().getNodeID()) {
-                // do nothing if already received from that node
-                return true; // is duplicate
+                // already received message from that node
+                // however, a node can send 2 next-votes for different values
+                //  for example, next-vote starting value in step4, but after seeing majority of
+                //  soft-votes for a non-empty block, next-votes that block in step5
+                if(in.getBlock() == null && msg.getBlock() == null) {
+                    return true; // both for empty block, so they are duplicate votes
+                }
+                else if(in.getBlock() == null || msg.getBlock() == null) {
+                    continue; // one for empty block and other isn't, so not duplicate votes
+                }
+                if(in.getBlock().equals(msg.getBlock())) {
+                    return true; // equals compares if blocks have the same id,so is duplicate
+                }
             }
         }
         // if haven't received, add msg to list

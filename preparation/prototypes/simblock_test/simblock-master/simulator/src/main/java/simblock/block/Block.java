@@ -156,4 +156,12 @@ public class Block {
       return this.getBlockWithHeight(block.height).equals(block);
     }
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if(! (o instanceof Block)) {
+      return false;
+    }
+    return ((Block)o).getId() == this.getId();
+  }
 }
