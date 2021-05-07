@@ -45,6 +45,8 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Change for a node to have a block "ready" when selected to propose
     // (1-BLOCK_CREATION_CHANCE) is basically the chance for the proposer to not propose on a certain period
     public static final double BLOCK_CREATION_CHANCE = 0.8;
+    // Number of nodes selected to propose in each round
+    public static final int NUM_PROPOSERS = 2;
 
     /**
      * round: node's current round
@@ -94,7 +96,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
 
     @Override
     public SampleStakingTask minting() {
-        return null; //TODO
+        return null;
     }
 
     @Override
@@ -139,7 +141,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
                 Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
                 if(mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
                     // if there was a non-empty block with more than REQUIRED_VOTES in the previous period, propose it
-                    if(inCommitee(getSelfNode().getNodeID())) {
+                    if(inCommittee(getSelfNode().getNodeID())) {
                         log("Proposing non-empty with majority votes from previous period. Block id="+mostNextVotedBlock.second.getId());
                         broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, mostNextVotedBlock.second);
                     }
@@ -166,7 +168,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Step 2 of the Agreement Protocol
     public void filteringStep() throws NoSuchAlgorithmException {
         if(step == 2) {
-            if(inCommitee(getSelfNode().getNodeID())) {
+            if(inCommittee(getSelfNode().getNodeID())) {
                 Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
                 if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
                     // if period >= 2 and there was a non-empty block with more than REQUIRED_VOTES
@@ -195,7 +197,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Step 3 of the Agreement Protocol
     public void certifyingStep() {
         if(step == 3) {
-            if(inCommitee(getSelfNode().getNodeID())) {
+            if(inCommittee(getSelfNode().getNodeID())) {
                 Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
                 if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
                     // if there was a block with more than REQUIRED_VOTES softvotes in the current period, certvote for it
@@ -215,7 +217,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Step 4 of the Agreement Protocol
     public void finishingStepOne() {
         if(step == 4) {
-            if(inCommitee(getSelfNode().getNodeID())) {
+            if(inCommittee(getSelfNode().getNodeID())) {
                 Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(nextvotes));
                 if(certVoted.first) {
                     // if the node has certvoted for a block in this period, nextvote for that same block
@@ -241,7 +243,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Step 5 of the Agreement Protocol
     public void finishingStepTwo() {
         if(step == 5) {
-            if(inCommitee(getSelfNode().getNodeID())) {
+            if(inCommittee(getSelfNode().getNodeID())) {
                 Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
                 Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
                 if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
@@ -513,18 +515,30 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     }
 
     // Check if node was selected by sortition to propose in the current round
+    // TODO(miguel) duplicate code in this function and inCommittee
     private boolean selectedBySortition(int nodeId) {
         // Since all nodes will use the round as a seed, only one node will be selected per round
         Random r = new Random(round);
-        boolean res = (r.nextInt(NUM_OF_NODES) + 1) == nodeId;
-        if(res) {
-            printSelectedToPropose(nodeId, round);
+        ArrayList<Integer> selected = new ArrayList(NUM_PROPOSERS);
+        while(selected.size() < NUM_PROPOSERS) {
+            int rNum = (r.nextInt(NUM_OF_NODES) + 1);
+            if(selected.contains(rNum)) {
+                continue;
+            }
+            if(rNum == nodeId) {
+                printSelectedToPropose(nodeId, round);
+                selected.add(rNum);
+                return true;
+            }
+            else {
+                selected.add(rNum);
+            }
         }
-        return res;
+        return false;
     }
 
     // Check if node is in the current round's committee
-    private boolean inCommitee(int nodeId) {
+    private boolean inCommittee(int nodeId) {
         // Since all nodes will use the round as a seed, they will see the same nodes being selected
         Random r = new Random(round);
         ArrayList<Integer> selected = new ArrayList(T);
