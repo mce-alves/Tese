@@ -23,9 +23,9 @@ import simblock.block.SamplePoSBlock;
 import simblock.node.Node;
 
 public class SampleStakingTask extends AbstractMintingTask {
-  private final BigInteger difficulty;
+  private final double difficulty;
 
-  public SampleStakingTask(Node minter, long interval, BigInteger difficulty) {
+  public SampleStakingTask(Node minter, long interval, double difficulty) {
     super(minter, interval);
     this.difficulty = difficulty;
   }

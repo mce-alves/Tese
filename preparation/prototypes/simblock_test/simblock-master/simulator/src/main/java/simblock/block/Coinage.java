@@ -23,7 +23,7 @@ import java.math.BigInteger;
  * The type Coinage tracks the age of coins.
  */
 public class Coinage implements Cloneable {
-  private BigInteger coins;
+  private double coins;
   private long age;
 
   /**
@@ -32,7 +32,7 @@ public class Coinage implements Cloneable {
    * @param coins the coins
    * @param age   the age
    */
-  public Coinage(BigInteger coins, long age) {
+  public Coinage(double coins, long age) {
     this.coins = coins;
     this.age = age;
   }
@@ -42,7 +42,7 @@ public class Coinage implements Cloneable {
    *
    * @return the coins
    */
-  public BigInteger getCoins() {
+  public double getCoins() {
     return this.coins;
   }
 
@@ -75,9 +75,7 @@ public class Coinage implements Cloneable {
    * @param reward the reward
    */
   public void reward(double reward) {
-    this.coins = this.coins.add(
-        new BigDecimal(this.getCoinage()).multiply(new BigDecimal(reward)).toBigInteger()
-    );
+    this.coins = this.coins + (this.getCoinage() * reward);
   }
 
   /**
@@ -86,8 +84,8 @@ public class Coinage implements Cloneable {
    * @return the coinage
    */
   //TODO what is coin age
-  public BigInteger getCoinage() {
-    return this.getCoins().multiply(BigInteger.valueOf(this.getAge()));
+  public double getCoinage() {
+    return (this.getCoins() * this.getAge());
   }
 
   @Override

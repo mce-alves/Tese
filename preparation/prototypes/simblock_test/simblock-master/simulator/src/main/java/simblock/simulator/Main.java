@@ -19,8 +19,10 @@ package simblock.simulator;
 
 import simblock.auxiliary.MyLogger;
 import simblock.block.Block;
+import simblock.block.SamplePoSBlock;
 import simblock.node.*;
 import simblock.node.consensus.AlgorandConsensus;
+import simblock.node.consensus.SampleProofOfStake;
 import simblock.settings.SimulationConfiguration;
 import simblock.simulator.statistics.AlgorandStatistics;
 import simblock.task.AbstractMintingTask;
@@ -378,8 +380,13 @@ public class Main {
     }
 
     if(PROTOCOL_FAMILY.equals("POS")) {
+      SamplePoSBlock genesis = SamplePoSBlock.genesisBlock(getSimulatedNodes().get(0));
       for(Node node : getSimulatedNodes()) {
-        // Triggers the start of the protocol for all nodes
+        // Every node starts with the genesis block in its chain (sortition requires access to the stakes
+        //  which are unknown if there is no initial block in the chain)
+        // TODO(miguel) is there a more elegant alternative?
+        node.addToChain(genesis);
+        // Triggers the start of the protocol for all node
         putTask(new AlgorandIncStepTask(node, 2*AlgorandConsensus.LAMBDA, 1));
       }
     }

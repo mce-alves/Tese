@@ -4,6 +4,7 @@ package simblock.node.consensus;
 import simblock.auxiliary.MyLogger;
 import simblock.auxiliary.Pair;
 import simblock.block.Block;
+import simblock.block.Coinage;
 import simblock.block.SamplePoSBlock;
 import simblock.node.Node;
 import simblock.settings.SimulationConfiguration;
@@ -19,10 +20,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static simblock.settings.SimulationConfiguration.BLOCK_SIZE;
@@ -33,6 +31,11 @@ import static simblock.simulator.Timer.getCurrentTime;
 import static simblock.simulator.Timer.putTask;
 
 public class AlgorandConsensus extends AbstractConsensusAlgo {
+
+    private enum SortitionRole {
+        PROPOSER,
+        COMMITTEE
+    }
 
     // TODO(miguel) check what are appropriate values for the constants (pages 11 and 12)
     //  https://people.csail.mit.edu/nickolai/papers/gilad-algorand-eprint.pdf
@@ -113,10 +116,10 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
 
         return (
                 receivedBlockHeight == 0 ||
-                        recPoSBlock.getDifficulty().compareTo(receivedBlockParent.getNextDifficulty()) >= 0
+                        recPoSBlock.getDifficulty() >= receivedBlockParent.getNextDifficulty()
         ) && (
                 currentBlock == null ||
-                        recPoSBlock.getTotalDifficulty().compareTo(currPoSBlock.getTotalDifficulty()) > 0
+                        recPoSBlock.getTotalDifficulty() > currPoSBlock.getTotalDifficulty()
         );
     }
 
@@ -132,7 +135,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         if(step == 1) {
             if(period == 1) {
                 // if period = 1, then node is free to propose anything (if he is selected to propose)
-                if(selectedBySortition(getSelfNode().getNodeID())) {
+                if(inCommittee(getSelfNode().getNodeID(), SortitionRole.PROPOSER)) {
                     log("Selected to propose.");
                     createAndProposeBlock();
                 }
@@ -141,14 +144,14 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
                 Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
                 if(mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
                     // if there was a non-empty block with more than REQUIRED_VOTES in the previous period, propose it
-                    if(inCommittee(getSelfNode().getNodeID())) {
+                    if(inCommittee(getSelfNode().getNodeID(), SortitionRole.COMMITTEE)) {
                         log("Proposing non-empty with majority votes from previous period. Block id="+mostNextVotedBlock.second.getId());
                         broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, mostNextVotedBlock.second);
                     }
                 }
                 else {
                     // otherwise, re-check if selected by sortition, and try to create a block to propose
-                    if(selectedBySortition(getSelfNode().getNodeID())) {
+                    if(inCommittee(getSelfNode().getNodeID(), SortitionRole.PROPOSER)) {
                         log("Selected to propose.");
                         createAndProposeBlock();
                     }
@@ -168,7 +171,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Step 2 of the Agreement Protocol
     public void filteringStep() throws NoSuchAlgorithmException {
         if(step == 2) {
-            if(inCommittee(getSelfNode().getNodeID())) {
+            if(inCommittee(getSelfNode().getNodeID(), SortitionRole.COMMITTEE)) {
                 Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
                 if(period >= 2 && mostNextVotedBlock.first && mostNextVotedBlock.second != null) {
                     // if period >= 2 and there was a non-empty block with more than REQUIRED_VOTES
@@ -197,7 +200,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Step 3 of the Agreement Protocol
     public void certifyingStep() {
         if(step == 3) {
-            if(inCommittee(getSelfNode().getNodeID())) {
+            if(inCommittee(getSelfNode().getNodeID(), SortitionRole.COMMITTEE)) {
                 Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
                 if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
                     // if there was a block with more than REQUIRED_VOTES softvotes in the current period, certvote for it
@@ -217,7 +220,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Step 4 of the Agreement Protocol
     public void finishingStepOne() {
         if(step == 4) {
-            if(inCommittee(getSelfNode().getNodeID())) {
+            if(inCommittee(getSelfNode().getNodeID(), SortitionRole.COMMITTEE)) {
                 Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(nextvotes));
                 if(certVoted.first) {
                     // if the node has certvoted for a block in this period, nextvote for that same block
@@ -243,7 +246,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     // Step 5 of the Agreement Protocol
     public void finishingStepTwo() {
         if(step == 5) {
-            if(inCommittee(getSelfNode().getNodeID())) {
+            if(inCommittee(getSelfNode().getNodeID(), SortitionRole.COMMITTEE)) {
                 Pair<Boolean, Block> mostSoftVotedBlock = mostVoted(countVotes(softvotes));
                 Pair<Boolean, Block> mostNextVotedBlock = mostVoted(countVotes(prevnextvotes));
                 if(mostSoftVotedBlock.first && mostSoftVotedBlock.second != null) {
@@ -346,26 +349,17 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
     }
 
     private void createAndProposeBlock() {
-        if(round == 1) {
-            // if chosen to propose in the first round, then propose the genesis block
-            startingValue = genesisBlock();
-            log("Proposing genesis block.");
+        // create a block that extends the current head of the chain
+        // coin flip to abstract if it is able to create a block at this time
+        if(Main.random.nextDouble() <= BLOCK_CREATION_CHANCE) {
+            SamplePoSBlock parent = (SamplePoSBlock) getSelfNode().getBlock();
+            startingValue = new SamplePoSBlock(parent, getSelfNode(), getCurrentTime(), parent.getNextDifficulty());
+            log("Proposing new block with id="+startingValue.getId());
             printCreateBlock(startingValue);
             broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
         }
         else {
-            // create a block that extends the current head of the chain
-            // coin flip to abstract if it is able to create a block at this time
-            if(Main.random.nextDouble() <= BLOCK_CREATION_CHANCE) {
-                SamplePoSBlock parent = (SamplePoSBlock) getSelfNode().getBlock();
-                startingValue = new SamplePoSBlock(parent, getSelfNode(), getCurrentTime(), parent.getNextDifficulty());
-                log("Proposing new block with id="+startingValue.getId());
-                printCreateBlock(startingValue);
-                broadcastProtocolMessage(AlgorandMsgType.PROPOSAL, round, period, step, startingValue);
-            }
-            else {
-                startingValue = null;
-            }
+            startingValue = null;
         }
     }
 
@@ -514,47 +508,56 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         }
     }
 
-    // Check if node was selected by sortition to propose in the current round
-    // TODO(miguel) duplicate code in this function and inCommittee
-    private boolean selectedBySortition(int nodeId) {
-        // Since all nodes will use the round as a seed, only one node will be selected per round
-        Random r = new Random(round);
-        ArrayList<Integer> selected = new ArrayList(NUM_PROPOSERS);
-        while(selected.size() < NUM_PROPOSERS) {
-            int rNum = (r.nextInt(NUM_OF_NODES) + 1);
-            if(selected.contains(rNum)) {
-                continue;
-            }
-            if(rNum == nodeId) {
-                printSelectedToPropose(nodeId, round);
-                selected.add(rNum);
-                return true;
-            }
-            else {
-                selected.add(rNum);
-            }
+    // Check if node has the SoritionRole <role> in the current round of the protocol
+    private boolean inCommittee(int nodeId, SortitionRole role) {
+        int amount = 0;
+        switch(role) {
+            case PROPOSER:
+                amount = NUM_PROPOSERS;
+                break;
+            case COMMITTEE:
+                amount = T;
+                break;
+            default:
+                break;
         }
-        return false;
-    }
-
-    // Check if node is in the current round's committee
-    private boolean inCommittee(int nodeId) {
         // Since all nodes will use the round as a seed, they will see the same nodes being selected
         Random r = new Random(round);
-        ArrayList<Integer> selected = new ArrayList(T);
+        ArrayList<Integer> selected = new ArrayList(amount);
+        SamplePoSBlock b = ((SamplePoSBlock)getSelfNode().getBlock());
+        Map<Node, Coinage> coins = b.getCoinages();
+        double total = b.getTotalCoinage();
+        Iterator<Map.Entry<Node, Coinage>> it;
 
-        while(selected.size() < T) {
-            int rNum = (r.nextInt(NUM_OF_NODES) + 1);
+        while(selected.size() < amount) {
+            double weight = r.nextDouble() * total; // nextDouble returns value between [0.0, 1.0]
+            int rNum = 0;
+            it = coins.entrySet().iterator();
+            while(it.hasNext()) {
+                Map.Entry<Node, Coinage> current = it.next();
+                weight -= current.getValue().getCoinage();
+                if(weight <= 0) {
+                    // select current node to be in sortition
+                    rNum = current.getKey().getNodeID();
+                    break;
+                }
+            }
             if(selected.contains(rNum)) {
                 continue;
             }
+            selected.add(rNum);
             if(rNum == nodeId) {
-                printInCommittee(nodeId, round);
-                selected.add(rNum);
+                switch(role) {
+                    case PROPOSER:
+                        printSelectedToPropose(nodeId, round);
+                        break;
+                    case COMMITTEE:
+                        printInCommittee(nodeId, round);
+                        break;
+                    default:
+                        break;
+                }
                 return true;
-            }
-            else {
-                selected.add(rNum);
             }
         }
 

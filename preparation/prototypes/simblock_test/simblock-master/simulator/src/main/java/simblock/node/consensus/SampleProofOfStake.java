@@ -42,8 +42,8 @@ public class SampleProofOfStake extends AbstractConsensusAlgo {
   public SampleStakingTask minting() {
     Node selfNode = this.getSelfNode();
     SamplePoSBlock parent = (SamplePoSBlock) selfNode.getBlock();
-    BigInteger difficulty = parent.getNextDifficulty();
-    double p = parent.getCoinage(selfNode).getCoinage().doubleValue() / difficulty.doubleValue();
+    double difficulty = parent.getNextDifficulty();
+    double p = parent.getCoinage(selfNode).getCoinage() / difficulty;
     double u = random.nextDouble();
     return p <= Math.pow(2, -53) ? null : new SampleStakingTask(selfNode,
                                                                 (long) (Math.log(u) / Math.log(
@@ -66,10 +66,10 @@ public class SampleProofOfStake extends AbstractConsensusAlgo {
     //TODO - dangerous to split due to short circuit operators being used, refactor?
     return (
         receivedBlockHeight == 0 ||
-            recPoSBlock.getDifficulty().compareTo(receivedBlockParent.getNextDifficulty()) >= 0
+            recPoSBlock.getDifficulty() >= receivedBlockParent.getNextDifficulty()
     ) && (
         currentBlock == null ||
-            recPoSBlock.getTotalDifficulty().compareTo(currPoSBlock.getTotalDifficulty()) > 0
+            recPoSBlock.getTotalDifficulty() > currPoSBlock.getTotalDifficulty()
     );
   }
 

@@ -38,7 +38,7 @@ public class SimulationConfiguration {
   /**
    * The consensus algorithm to be used.
    */
-  // TODO(miguel) changed from PoW to AlgorandConsensus
+  // TODO(miguel) changed from ProofOfWork to AlgorandConsensus
   public static final String ALGO = "simblock.node.consensus.AlgorandConsensus";
 
   /**

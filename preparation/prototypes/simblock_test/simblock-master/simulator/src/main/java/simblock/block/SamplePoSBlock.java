@@ -34,9 +34,10 @@ import simblock.node.Node;
 public class SamplePoSBlock extends Block {
   private final Map<Node, Coinage> coinages;
   private static Map<Node, Coinage> genesisCoinages;
-  private final BigInteger difficulty;
-  private final BigInteger totalDifficulty;
-  private final BigInteger nextDifficulty;
+  private final double difficulty;
+  private final double totalDifficulty;
+  private final double nextDifficulty;
+  private final double totalCoinage;
 
   /**
    * Instantiates a new Sample proof of stake block.
@@ -47,7 +48,7 @@ public class SamplePoSBlock extends Block {
    * @param difficulty the difficulty
    */
   public SamplePoSBlock(
-      SamplePoSBlock parent, Node minter, long time, BigInteger difficulty
+      SamplePoSBlock parent, Node minter, long time, double difficulty
   ) {
     super(parent, minter, time);
 
@@ -65,20 +66,19 @@ public class SamplePoSBlock extends Block {
       this.coinages.get(minter).resetAge();
     }
 
-    BigInteger totalCoinage = BigInteger.ZERO;
+    double tc = 0;
     for (Node node : getSimulatedNodes()) {
-      totalCoinage = totalCoinage.add(this.coinages.get(node).getCoinage());
+      tc = tc + this.coinages.get(node).getCoinage();
     }
+    this.totalCoinage = tc;
 
     this.difficulty = difficulty;
     if (parent == null) {
-      this.totalDifficulty = BigInteger.ZERO.add(difficulty);
+      this.totalDifficulty = difficulty;
     } else {
-      this.totalDifficulty = parent.getTotalDifficulty().add(difficulty);
+      this.totalDifficulty = parent.getTotalDifficulty() + difficulty;
     }
-    this.nextDifficulty = totalCoinage.multiply(
-            BigInteger.valueOf(getTargetInterval())).divide(BigInteger.valueOf(1000)
-    );
+    this.nextDifficulty = (tc * getTargetInterval()) / 1000;
   }
 
   /**
@@ -92,12 +92,20 @@ public class SamplePoSBlock extends Block {
     return this.coinages.get(node);
   }
 
+  public Map<Node, Coinage> getCoinages() {
+    return this.coinages;
+  }
+
+  public double getTotalCoinage() {
+    return this.totalCoinage;
+  }
+
   /**
    * Gets difficulty.
    *
    * @return the difficulty
    */
-  public BigInteger getDifficulty() {
+  public double getDifficulty() {
     return this.difficulty;
   }
 
@@ -106,7 +114,7 @@ public class SamplePoSBlock extends Block {
    *
    * @return the total difficulty
    */
-  public BigInteger getTotalDifficulty() {
+  public double getTotalDifficulty() {
     return this.totalDifficulty;
   }
 
@@ -115,13 +123,13 @@ public class SamplePoSBlock extends Block {
    *
    * @return the next difficulty
    */
-  public BigInteger getNextDifficulty() {
+  public double getNextDifficulty() {
     return this.nextDifficulty;
   }
 
   private static Coinage genCoinage() {
     double r = random.nextGaussian();
-    BigInteger coins = BigInteger.valueOf(Math.max((int) (r * STDEV_OF_COINS + AVERAGE_COINS), 0));
+    double coins = Math.max(((r * STDEV_OF_COINS + AVERAGE_COINS)), 0);
     return new Coinage(coins, 1);
   }
 
@@ -136,6 +144,6 @@ public class SamplePoSBlock extends Block {
     for (Node node : getSimulatedNodes()) {
       genesisCoinages.put(node, genCoinage());
     }
-    return new SamplePoSBlock(null, minter, 0, BigInteger.ZERO);
+    return new SamplePoSBlock(null, minter, 0, 0);
   }
 }
