@@ -116,6 +116,7 @@ export default {
       this.ctx.canvas.height = document.body.clientHeight;
     },
     updateFile: function(file) {
+      console.clear();
       if (file === null) return;
       if (file.type !== "application/json") {
         this.showLoadStatus(false);

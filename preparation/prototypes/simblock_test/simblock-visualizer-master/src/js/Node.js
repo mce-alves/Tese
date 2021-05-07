@@ -102,7 +102,9 @@ export default class Node {
     }
     else {
       const b = this.getBlock(timestamp);
-      p = (b.ownerNode.id == this.id);
+      if(b != null) {
+        p = (b.ownerNode.id == this.id);
+      }
     }
     console.log({
       id: this.id,
