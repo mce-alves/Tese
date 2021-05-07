@@ -96,13 +96,21 @@ export default class Node {
   }
 
   log(timestamp) {
+    let p = false;
+    if(window.PROTOCOL == "POS") {
+      p = this.isProposer(timestamp);
+    }
+    else {
+      const b = this.getBlock(timestamp);
+      p = (b.ownerNode.id == this.id);
+    }
     console.log({
       id: this.id,
       region: this.region.name,
       currentStatistics: {
         chainHead: this.getBlock(timestamp),
         inCommittee: this.committeeMember(timestamp),
-        proposer: this.isProposer(timestamp)
+        proposer: p
       },
       globalStatistics:{
         committeeParticipations: this.inCommittee.length,
