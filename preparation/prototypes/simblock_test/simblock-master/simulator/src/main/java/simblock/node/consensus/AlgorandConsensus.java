@@ -672,6 +672,7 @@ public class AlgorandConsensus extends AbstractConsensusAlgo {
         OUT_JSON_FILE.print("\"content\":{");
         OUT_JSON_FILE.print("\"number-of-nodes\":" + NUM_OF_NODES + ",");
         OUT_JSON_FILE.print("\"lambda\":" + LAMBDA + ",");
+        OUT_JSON_FILE.print("\"number-of-proposers\":" + NUM_PROPOSERS + ",");
         OUT_JSON_FILE.print("\"block-creation-chance\":" + BLOCK_CREATION_CHANCE + ",");
         OUT_JSON_FILE.print("\"committee-size\":" + T + ",");
         OUT_JSON_FILE.print("\"majority-size\":" + REQUIRED_VOTES);
