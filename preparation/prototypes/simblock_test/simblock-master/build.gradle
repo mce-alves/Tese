@@ -3,10 +3,16 @@ import org.gradle.plugins.ide.eclipse.model.*
 
 apply plugin: 'idea'
 apply plugin: 'eclipse'
+apply plugin: 'java'
 
 def srcDir = 'src/main/java'
 def confDir = 'src/dist/conf'
 def outDir = 'build/classes/java/main'
+
+repositories {
+    mavenCentral()
+}
+
 
 subprojects {
     apply plugin: 'java'
@@ -76,10 +82,18 @@ allprojects {
 project(':simulator') {
     mainClassName = 'simblock.simulator.Main'
 
+    repositories {
+        mavenCentral()
+    }
+
     def distSettings = {
         baseName = 'simblock'
         exclude('output/graph/*.*')
         exclude('output/*.*')
+    }
+
+    dependencies {
+        implementation 'org.apache.commons:commons-math3:3.6.1'
     }
 
     distZip {
@@ -93,4 +107,8 @@ project(':simulator') {
     startScripts {
         applicationName = 'runSimBlock'
     }
+}
+
+dependencies {
+    implementation 'org.apache.commons:commons-math3:3.6.1'
 }

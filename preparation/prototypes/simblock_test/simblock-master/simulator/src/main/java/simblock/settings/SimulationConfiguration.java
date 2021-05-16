@@ -27,7 +27,6 @@ public class SimulationConfiguration {
   /**
    * The number of nodes participating in the blockchain network.
    */
-  //TODO(miguel) revert
   public static final int NUM_OF_NODES = 50;//300;//600;//800;//6000;
 
   /**
@@ -38,7 +37,6 @@ public class SimulationConfiguration {
   /**
    * The consensus algorithm to be used.
    */
-  // TODO(miguel) changed from ProofOfWork to AlgorandConsensus
   public static final String ALGO = "simblock.node.consensus.AlgorandConsensus";
 
   /**
